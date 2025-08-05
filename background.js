@@ -88,7 +88,6 @@ function saveTime(domain, secondsSpent) {
     co2Data[domain] = (co2Data[domain] || 0) + co2;
 
     chrome.storage.local.set({ usage: usageData, co2: co2Data });
-    console.log("Calculating CO2 for state:", userState);
   });
 }
 
