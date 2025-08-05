@@ -1,8 +1,5 @@
-// background.js - Updated with CO2 Emission Estimation
-
 // === Configuration Tables ===
 
-// Average GB consumed per hour of usage per platform
 const DATA_USAGE_PER_HOUR = {
   "youtube.com": 1.5,
   "netflix.com": 3.0,
@@ -18,10 +15,8 @@ const DATA_USAGE_PER_HOUR = {
   "default": 0.2
 };
 
-// India average electricity consumption per GB of data (in kWh)
 const ELECTRICITY_PER_GB_KWH = 0.12;
 
-// Emission factor per state (gCO2 per kWh)
 const STATE_EMISSION_FACTOR = {
   "Andra Pradesh": 654,
   "Arunachal Pradesh": 24,
@@ -41,7 +36,7 @@ const STATE_EMISSION_FACTOR = {
   "Meghalaya": 24,
   "Mizoram": 25,
   "Nagaland": 24,
-  "Odisha": 739, 
+  "Odisha": 739,
   "Punjab": 685,
   "Rajasthan": 437,
   "Sikkim": 24,
@@ -51,48 +46,46 @@ const STATE_EMISSION_FACTOR = {
   "Uttar Pradesh": 764,
   "Uttarakhand": 57,
   "West Bengal": 782,
-  "default": 621 // India national average
+  "default": 621
 };
 
-// === User-selected state (this will eventually come from UI/localStorage) ===
-let userState = "default";
+// === Runtime Variables ===
 
-// === CO2 Estimation Function ===
-function estimateCO2(domain, seconds) {
+let currentTabId = null;
+let currentDomain = null;
+let startTimestamp = null;
+
+// === Helpers ===
+
+function getDomainFromUrl(url) {
+  try {
+    let domain = new URL(url).hostname.replace(/^www\./, "");
+    return domain;
+  } catch {
+    return null;
+  }
+}
+
+function estimateCO2(domain, seconds, userState) {
   const hours = seconds / 3600;
   const gbPerHour = DATA_USAGE_PER_HOUR[domain] || DATA_USAGE_PER_HOUR["default"];
   const gbUsed = gbPerHour * hours;
   const electricityUsed = gbUsed * ELECTRICITY_PER_GB_KWH;
   const emissionFactor = STATE_EMISSION_FACTOR[userState] || STATE_EMISSION_FACTOR["default"];
-  const co2Emitted = electricityUsed * emissionFactor; // in grams
-  return co2Emitted;
+  return electricityUsed * emissionFactor;
 }
 
-// === Runtime Tracking Variables ===
-let currentTabId = null;
-let currentDomain = null;
-let startTimestamp = null;
+// === Main Logic ===
 
-// Extract domain name from full URL
-function getDomainFromUrl(url) {
-  try {
-    let urlObject = new URL(url);
-    let domain = urlObject.hostname.replace(/^www\./, "");
-    return domain;
-  } catch (error) {
-    return null;
-  }
-}
-
-// Save time spent + CO2 emissions per domain
 function saveTime(domain, secondsSpent) {
   if (!domain || !secondsSpent) return;
 
-  const co2 = estimateCO2(domain, secondsSpent);
+  chrome.storage.local.get(["usage", "co2", "userState"], function (result) {
+    const usageData = result.usage || {};
+    const co2Data = result.co2 || {};
+    const userState = result.userState || "default";
 
-  chrome.storage.local.get(["usage", "co2"], function(result) {
-    let usageData = result.usage || {};
-    let co2Data = result.co2 || {};
+    const co2 = estimateCO2(domain, secondsSpent, userState);
 
     usageData[domain] = (usageData[domain] || 0) + secondsSpent;
     co2Data[domain] = (co2Data[domain] || 0) + co2;
@@ -101,16 +94,17 @@ function saveTime(domain, secondsSpent) {
   });
 }
 
-// Track tab switches
-chrome.tabs.onActivated.addListener(function(info) {
-  chrome.tabs.get(info.tabId, function(tab) {
+// === Track Tab Switches ===
+
+chrome.tabs.onActivated.addListener(function (info) {
+  chrome.tabs.get(info.tabId, function (tab) {
     if (!tab.url) return;
 
-    let domain = getDomainFromUrl(tab.url);
-    let now = Date.now();
+    const domain = getDomainFromUrl(tab.url);
+    const now = Date.now();
 
-    if (currentDomain !== null && startTimestamp !== null) {
-      let timeSpent = Math.floor((now - startTimestamp) / 1000);
+    if (currentDomain && startTimestamp) {
+      const timeSpent = Math.floor((now - startTimestamp) / 1000);
       saveTime(currentDomain, timeSpent);
     }
 
@@ -120,14 +114,15 @@ chrome.tabs.onActivated.addListener(function(info) {
   });
 });
 
-// Track URL changes in the same tab
-chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-  if (tab.active && changeInfo.url) {
-    let domain = getDomainFromUrl(changeInfo.url);
-    let now = Date.now();
+// === Track URL Changes in Same Tab ===
 
-    if (currentDomain !== null && startTimestamp !== null) {
-      let timeSpent = Math.floor((now - startTimestamp) / 1000);
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+  if (tab.active && changeInfo.url) {
+    const domain = getDomainFromUrl(changeInfo.url);
+    const now = Date.now();
+
+    if (currentDomain && startTimestamp) {
+      const timeSpent = Math.floor((now - startTimestamp) / 1000);
       saveTime(currentDomain, timeSpent);
     }
 
