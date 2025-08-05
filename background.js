@@ -22,7 +22,7 @@ const STATE_EMISSION_FACTOR = {
   "Arunachal Pradesh": 24,
   "Ass am": 586,
   "Bi har": 815,
-  "Chattisgarh": 806,
+  "Chattis garh": 806,
   "Go a": 46,
   "Guja rat": 492,
   "Har yana": 769,
