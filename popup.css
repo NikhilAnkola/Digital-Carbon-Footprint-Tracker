@@ -52,3 +52,19 @@ ul {
 li {
   margin-bottom: 6px;
 }
+
+button {
+  padding: 6px 12px;
+  font-size: 14px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: #c0392b;
+}
