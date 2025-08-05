@@ -2,7 +2,7 @@ body {
   font-family: Arial, sans-serif;
   font-size: 14px;
   padding: 12px;
-  width: 300px;
+  width: 320px;
   background-color: #f4f4f4;
   margin: 0;
   box-sizing: border-box;
@@ -30,4 +30,25 @@ select {
 select:focus {
   outline: none;
   border-color: #3399ff;
+}
+
+#usageContainer {
+  font-size: 13px;
+  margin-top: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #fff;
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+ul {
+  padding-left: 20px;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+li {
+  margin-bottom: 6px;
 }
