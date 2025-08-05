@@ -59,8 +59,7 @@ let startTimestamp = Date.now();
 
 function getDomainFromUrl(url) {
   try {
-    let domain = new URL(url).hostname.replace(/^www\./, "");
-    return domain;
+    return new URL(url).hostname.replace(/^www\./, "");
   } catch {
     return null;
   }
@@ -76,9 +75,9 @@ function estimateCO2(domain, seconds, userState) {
 }
 
 function saveTime(domain, secondsSpent) {
-  if (!domain || !secondsSpent) return;
+  if (!domain || secondsSpent <= 0) return;
 
-  chrome.storage.local.get(["usage", "co2", "userState"], function (result) {
+  chrome.storage.local.get(["usage", "co2", "userState"], (result) => {
     const usageData = result.usage || {};
     const co2Data = result.co2 || {};
     const userState = result.userState || "default";
@@ -89,13 +88,14 @@ function saveTime(domain, secondsSpent) {
     co2Data[domain] = (co2Data[domain] || 0) + co2;
 
     chrome.storage.local.set({ usage: usageData, co2: co2Data });
+    console.log("Calculating CO2 for state:", userState);
   });
 }
 
 // === Track Tab Switches ===
 
-chrome.tabs.onActivated.addListener(function (info) {
-  chrome.tabs.get(info.tabId, function (tab) {
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  chrome.tabs.get(tabId, (tab) => {
     if (!tab.url) return;
 
     const domain = getDomainFromUrl(tab.url);
@@ -106,7 +106,7 @@ chrome.tabs.onActivated.addListener(function (info) {
       saveTime(currentDomain, timeSpent);
     }
 
-    currentTabId = info.tabId;
+    currentTabId = tabId;
     currentDomain = domain;
     startTimestamp = now;
   });
@@ -114,7 +114,7 @@ chrome.tabs.onActivated.addListener(function (info) {
 
 // === Track URL Changes in Same Tab ===
 
-chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (tab.active && changeInfo.url) {
     const domain = getDomainFromUrl(changeInfo.url);
     const now = Date.now();
@@ -130,19 +130,19 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   }
 });
 
-// === AFK-Friendly Polling Every 30s ===
+// === AFK-Friendly Polling (Every 30 seconds) ===
 
 setInterval(() => {
   chrome.windows.getLastFocused({ populate: true }, (window) => {
     if (!window || !window.focused || !window.tabs) return;
 
-    const activeTab = window.tabs.find(t => t.active);
-    if (!activeTab || !activeTab.url) return;
+    const activeTab = window.tabs.find(t => t.active && t.url);
+    if (!activeTab) return;
 
     const domain = getDomainFromUrl(activeTab.url);
     const now = Date.now();
 
-    if (domain && domain === currentDomain && startTimestamp) {
+    if (domain === currentDomain && startTimestamp) {
       const timeSpent = Math.floor((now - startTimestamp) / 1000);
       saveTime(domain, timeSpent);
       startTimestamp = now;
@@ -151,4 +151,4 @@ setInterval(() => {
       startTimestamp = now;
     }
   });
-}, 30000); // every 30 seconds
+}, 30000); // every 30s
