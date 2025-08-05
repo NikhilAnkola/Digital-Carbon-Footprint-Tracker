@@ -1,42 +1,86 @@
-// Variables to store current tracking info
+// background.js - Updated with CO2 Emission Estimation
+
+// === Configuration Tables ===
+
+// Average GB consumed per hour of usage per platform
+const DATA_USAGE_PER_HOUR = {
+  "youtube.com": 1.5,
+  "netflix.com": 3.0,
+  "zoom.us": 1.0,
+  "meet.google.com": 1.0,
+  "whatsapp.com": 0.02,
+  "instagram.com": 0.5,
+  "facebook.com": 0.4,
+  "docs.google.com": 0.05,
+  "quora.com": 0.05,
+  "linkedin.com": 0.1,
+  "github.com": 0.05,
+  "default": 0.2
+};
+
+// India average electricity consumption per GB of data (in kWh)
+const ELECTRICITY_PER_GB_KWH = 0.12;
+
+// Emission factor per state (gCO2 per kWh)
+const STATE_EMISSION_FACTOR = {
+  "Gujarat": 720,
+  "Maharashtra": 640,
+  "Tamil Nadu": 620,
+  "Punjab": 590,
+  "Karnataka": 600,
+  "West Bengal": 680,
+  "Delhi": 650,
+  "default": 621 // India national average
+};
+
+// === User-selected state (this will eventually come from UI/localStorage) ===
+let userState = "default";
+
+// === CO2 Estimation Function ===
+function estimateCO2(domain, seconds) {
+  const hours = seconds / 3600;
+  const gbPerHour = DATA_USAGE_PER_HOUR[domain] || DATA_USAGE_PER_HOUR["default"];
+  const gbUsed = gbPerHour * hours;
+  const electricityUsed = gbUsed * ELECTRICITY_PER_GB_KWH;
+  const emissionFactor = STATE_EMISSION_FACTOR[userState] || STATE_EMISSION_FACTOR["default"];
+  const co2Emitted = electricityUsed * emissionFactor; // in grams
+  return co2Emitted;
+}
+
+// === Runtime Tracking Variables ===
 let currentTabId = null;
 let currentDomain = null;
 let startTimestamp = null;
 
-// Function to extract domain like "youtube.com" from a full URL
+// Extract domain name from full URL
 function getDomainFromUrl(url) {
   try {
     let urlObject = new URL(url);
-    let domain = urlObject.hostname;
-    if (domain.startsWith("www.")) {
-      domain = domain.slice(4);
-    }
+    let domain = urlObject.hostname.replace(/^www\./, "");
     return domain;
   } catch (error) {
     return null;
   }
 }
 
-// Function to save time spent on a website
+// Save time spent + CO2 emissions per domain
 function saveTime(domain, secondsSpent) {
-  if (!domain || !secondsSpent) {
-    return;
-  }
+  if (!domain || !secondsSpent) return;
 
-  chrome.storage.local.get(["usage"], function(result) {
+  const co2 = estimateCO2(domain, secondsSpent);
+
+  chrome.storage.local.get(["usage", "co2"], function(result) {
     let usageData = result.usage || {};
+    let co2Data = result.co2 || {};
 
-    if (!usageData[domain]) {
-      usageData[domain] = 0;
-    }
+    usageData[domain] = (usageData[domain] || 0) + secondsSpent;
+    co2Data[domain] = (co2Data[domain] || 0) + co2;
 
-    usageData[domain] += secondsSpent;
-
-    chrome.storage.local.set({ usage: usageData });
+    chrome.storage.local.set({ usage: usageData, co2: co2Data });
   });
 }
 
-// Tracking for tab switches
+// Track tab switches
 chrome.tabs.onActivated.addListener(function(info) {
   chrome.tabs.get(info.tabId, function(tab) {
     if (!tab.url) return;
@@ -55,7 +99,7 @@ chrome.tabs.onActivated.addListener(function(info) {
   });
 });
 
-// Tracking for URL changes in the same tab
+// Track URL changes in the same tab
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
   if (tab.active && changeInfo.url) {
     let domain = getDomainFromUrl(changeInfo.url);
