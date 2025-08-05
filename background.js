@@ -45,8 +45,7 @@ const STATE_EMISSION_FACTOR = {
   "Tripura": 489,
   "Uttar Pradesh": 764,
   "Uttarakhand": 57,
-  "West Bengal": 782,
-  "default": 621
+  "West Bengal": 782
 };
 
 // === Runtime Variables ===
@@ -70,17 +69,19 @@ function estimateCO2(domain, seconds, userState) {
   const gbPerHour = DATA_USAGE_PER_HOUR[domain] || DATA_USAGE_PER_HOUR["default"];
   const gbUsed = gbPerHour * hours;
   const electricityUsed = gbUsed * ELECTRICITY_PER_GB_KWH;
-  const emissionFactor = STATE_EMISSION_FACTOR[userState] || STATE_EMISSION_FACTOR["default"];
+  const emissionFactor = STATE_EMISSION_FACTOR[userState];
   return electricityUsed * emissionFactor;
 }
 
 function saveTime(domain, secondsSpent) {
-  if (!domain || secondsSpent <= 0) return;
+  if (!domain || !secondsSpent) return;
 
-  chrome.storage.local.get(["usage", "co2", "userState"], (result) => {
+  chrome.storage.local.get(["usage", "co2", "userState"], function (result) {
     const usageData = result.usage || {};
     const co2Data = result.co2 || {};
-    const userState = result.userState || "default";
+    const userState = result.userState;
+
+    if (!userState || !(userState in STATE_EMISSION_FACTOR)) return;
 
     const co2 = estimateCO2(domain, secondsSpent, userState);
 
@@ -91,10 +92,10 @@ function saveTime(domain, secondsSpent) {
   });
 }
 
-// === Track Tab Switches ===
+// === Tab Switch ===
 
-chrome.tabs.onActivated.addListener(({ tabId }) => {
-  chrome.tabs.get(tabId, (tab) => {
+chrome.tabs.onActivated.addListener(function (info) {
+  chrome.tabs.get(info.tabId, function (tab) {
     if (!tab.url) return;
 
     const domain = getDomainFromUrl(tab.url);
@@ -105,15 +106,15 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
       saveTime(currentDomain, timeSpent);
     }
 
-    currentTabId = tabId;
+    currentTabId = info.tabId;
     currentDomain = domain;
     startTimestamp = now;
   });
 });
 
-// === Track URL Changes in Same Tab ===
+// === URL Change in Same Tab ===
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (tab.active && changeInfo.url) {
     const domain = getDomainFromUrl(changeInfo.url);
     const now = Date.now();
@@ -129,14 +130,14 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-// === AFK-Friendly Polling (Every 30 seconds) ===
+// === AFK Support (1s interval) ===
 
 setInterval(() => {
   chrome.windows.getLastFocused({ populate: true }, (window) => {
     if (!window || !window.focused || !window.tabs) return;
 
-    const activeTab = window.tabs.find(t => t.active && t.url);
-    if (!activeTab) return;
+    const activeTab = window.tabs.find(t => t.active);
+    if (!activeTab || !activeTab.url) return;
 
     const domain = getDomainFromUrl(activeTab.url);
     const now = Date.now();
@@ -150,4 +151,14 @@ setInterval(() => {
       startTimestamp = now;
     }
   });
-}, 30000); // every 30s
+}, 1000); // every 1 second
+
+// === Final Save on Suspend ===
+
+chrome.runtime.onSuspend.addListener(() => {
+  const now = Date.now();
+  const timeSpent = Math.floor((now - startTimestamp) / 1000);
+  if (currentDomain && timeSpent > 0) {
+    saveTime(currentDomain, timeSpent);
+  }
+});
