@@ -56,3 +56,13 @@ function loadUsageStats() {
     equivSpan.textContent = getEquivalent(totalCO2);
   });
 }
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  const confirmed = confirm("Are you sure you want to reset all tracking data?");
+  if (confirmed) {
+    chrome.storage.local.remove(["usage", "co2"], () => {
+      alert("All data reset successfully.");
+      location.reload(); // Refresh popup UI
+    });
+  }
+});
