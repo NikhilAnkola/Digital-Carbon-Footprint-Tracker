@@ -53,7 +53,7 @@ const STATE_EMISSION_FACTOR = {
 
 let currentTabId = null;
 let currentDomain = null;
-let startTimestamp = null;
+let startTimestamp = Date.now();
 
 // === Helpers ===
 
@@ -74,8 +74,6 @@ function estimateCO2(domain, seconds, userState) {
   const emissionFactor = STATE_EMISSION_FACTOR[userState] || STATE_EMISSION_FACTOR["default"];
   return electricityUsed * emissionFactor;
 }
-
-// === Main Logic ===
 
 function saveTime(domain, secondsSpent) {
   if (!domain || !secondsSpent) return;
@@ -131,3 +129,26 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
     startTimestamp = now;
   }
 });
+
+// === AFK-Friendly Polling Every 30s ===
+
+setInterval(() => {
+  chrome.windows.getLastFocused({ populate: true }, (window) => {
+    if (!window || !window.focused || !window.tabs) return;
+
+    const activeTab = window.tabs.find(t => t.active);
+    if (!activeTab || !activeTab.url) return;
+
+    const domain = getDomainFromUrl(activeTab.url);
+    const now = Date.now();
+
+    if (domain && domain === currentDomain && startTimestamp) {
+      const timeSpent = Math.floor((now - startTimestamp) / 1000);
+      saveTime(domain, timeSpent);
+      startTimestamp = now;
+    } else {
+      currentDomain = domain;
+      startTimestamp = now;
+    }
+  });
+}, 30000); // every 30 seconds
