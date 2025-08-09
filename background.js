@@ -171,6 +171,8 @@ chrome.runtime.onSuspend.addListener(() => {
   }
 });
 
-chrome.action.onClicked.addListener(() => {
-  chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+// === Toggle Floating Panel Instead of Opening New Tab ===
+chrome.action.onClicked.addListener((tab) => {
+  if (!tab.id) return;
+  chrome.tabs.sendMessage(tab.id, { action: "togglePanel" });
 });
