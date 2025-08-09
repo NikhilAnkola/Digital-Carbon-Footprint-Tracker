@@ -8,20 +8,24 @@ chrome.runtime.onMessage.addListener((msg) => {
 
 function togglePanel() {
   let panel = document.getElementById("carbonPanel");
+
   if (!panelInjected) {
     fetch(chrome.runtime.getURL("panel.html"))
       .then(r => r.text())
       .then(html => {
-        let temp = document.createElement("div");
-        temp.innerHTML = html;
-        document.body.appendChild(temp.firstElementChild);
+        let wrapper = document.createElement("div");
+        wrapper.innerHTML = html.trim();
+        document.body.appendChild(wrapper.firstElementChild);
+
         panelInjected = true;
         initPanel();
+
         setTimeout(() => {
           document.getElementById("carbonPanel").classList.add("open");
         }, 50);
-      });
-  } else {
+      })
+      .catch(err => console.error("Panel load failed:", err));
+  } else if (panel) {
     panel.classList.toggle("open");
   }
 }
@@ -30,21 +34,35 @@ function initPanel() {
   const stateSelect = document.getElementById("stateSelect");
   const closeBtn = document.getElementById("closePanel");
 
+  // Load saved state
   chrome.storage.local.get(["userState"], (res) => {
     if (res.userState) {
       stateSelect.value = res.userState;
     }
   });
 
+  // Save state on change
   stateSelect.addEventListener("change", () => {
     chrome.storage.local.set({ userState: stateSelect.value });
   });
 
+  // Close panel
   closeBtn.addEventListener("click", () => {
     document.getElementById("carbonPanel").classList.remove("open");
   });
 
+  // Click outside closes panel
+  document.addEventListener("click", (e) => {
+    const panel = document.getElementById("carbonPanel");
+    if (panel && !panel.contains(e.target) && !e.target.closest("#carbonPanel") && panel.classList.contains("open")) {
+      panel.classList.remove("open");
+    }
+  });
+
+  // Load usage stats
   loadUsageStats();
+
+  // Reset button
   document.getElementById("resetBtn").addEventListener("click", resetData);
 }
 
@@ -71,6 +89,7 @@ function loadUsageStats() {
     const today = new Date().toISOString().split("T")[0];
     const todayData = history[today] || { usage: {}, co2: {} };
 
+    // Today’s stats
     let html = "<ul>";
     let totalCO2 = 0;
     for (let domain in todayData.usage) {
@@ -81,23 +100,30 @@ function loadUsageStats() {
     }
     html += "</ul>";
 
-    container.innerHTML = html;
+    container.innerHTML = html || "<p>No usage recorded today.</p>";
     totalSpan.textContent = totalCO2.toFixed(1);
     equivSpan.textContent = getEquivalent(totalCO2);
 
+    // Past 90 days
     let histHtml = "<ul>";
     const sortedDates = Object.keys(history).sort().reverse();
     const recentDates = sortedDates.slice(0, 90);
+    let hasData = false;
+
     recentDates.forEach(date => {
       if (date === today) return;
       let dayTotal = 0;
       for (let d in history[date].co2) {
         dayTotal += history[date].co2[d];
       }
-      histHtml += `<li>${date}: ${dayTotal.toFixed(1)} g CO₂</li>`;
+      if (dayTotal > 0) {
+        histHtml += `<li>${date}: ${dayTotal.toFixed(1)} g CO₂</li>`;
+        hasData = true;
+      }
     });
+
     histHtml += "</ul>";
-    historyContainer.innerHTML = histHtml;
+    historyContainer.innerHTML = hasData ? histHtml : "<p>No past history yet.</p>";
   });
 }
 
