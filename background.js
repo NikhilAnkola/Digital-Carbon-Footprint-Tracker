@@ -168,20 +168,27 @@ chrome.runtime.onSuspend.addListener(() => {
   }
 });
 
-// === Inject dashboard.js ONLY when clicked ===
-chrome.action.onClicked.addListener((tab) => {
-  if (!tab.id) return;
 
+// === [UPDATED] Inject dashboard.js ONLY when clicked ===
+chrome.action.onClicked.addListener((tab) => {
+  // First, check if the URL is a restricted page.
+  if (!tab.id || !tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("https://chrome.google.com/")) {
+    console.log("Cannot run on a restricted page.");
+    return; // Exit the function early to prevent errors.
+  }
+
+  // If the page is valid, try to send a message to the content script.
   chrome.tabs.sendMessage(tab.id, { action: "togglePanel" }, (response) => {
+    // Check if an error occurred (e.g., the content script wasn't there).
     if (chrome.runtime.lastError) {
-      // Means dashboard.js isn't loaded yet → inject it
+      // If the content script is not injected yet, inject it now.
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: ["dashboard.js"]
       }, () => {
+        // After the script is successfully injected, send the message again to open the panel.
         chrome.tabs.sendMessage(tab.id, { action: "togglePanel" });
       });
     }
   });
 });
-
