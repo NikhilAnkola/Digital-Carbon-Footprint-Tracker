@@ -8,6 +8,7 @@
   <script src="popup.js" defer></script>
 </head>
 <body>
+  <!-- State Selection -->
   <label for="stateSelect"><b>Select your state:</b></label>
   <select id="stateSelect">
     <option value="default">India (Default)</option>
@@ -42,6 +43,8 @@
   </select>
 
   <hr>
+
+  <!-- Today's Usage -->
   <h3>Today's Usage Summary</h3>
   <div id="usageContainer"><p>Loading...</p></div>
 
@@ -49,7 +52,18 @@
     <li><b>Total CO₂ emitted:</b> <span id="totalCO2">0</span> g</li>
     <li><b>Equivalent to:</b> <span id="co2Equivalent">–</span></li>
   </ul>
+
+  <hr>
+
+  <!-- History -->
+  <div id="historyContainer">
+    <h3>Past 7 Days</h3>
+    <p>Loading history...</p>
+  </div>
+
   <hr />
+
+  <!-- Reset Button -->
   <button id="resetBtn">Reset All Data</button>
 </body>
 </html>
