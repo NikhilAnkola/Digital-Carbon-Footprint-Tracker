@@ -1,4 +1,5 @@
-let panelInjected = false;
+// The panelInjected flag is no longer needed with the new logic.
+// You can remove this line.
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.action === "togglePanel") {
@@ -9,25 +10,37 @@ chrome.runtime.onMessage.addListener((msg) => {
 function togglePanel() {
   let panel = document.getElementById("carbonPanel");
 
-  if (!panelInjected) {
-    fetch(chrome.runtime.getURL("panel.html"))
-      .then(r => r.text())
-      .then(html => {
-        let wrapper = document.createElement("div");
-        wrapper.innerHTML = html.trim();
-        document.body.appendChild(wrapper.firstElementChild);
+  // If the panel already exists on the page, just toggle its visibility
+  if (panel) {
+    panel.classList.toggle("open");
+    return; // We're done, so exit the function
+  }
 
-        panelInjected = true;
+  // If the panel doesn't exist, fetch the HTML and inject it
+  fetch(chrome.runtime.getURL("panel.html"))
+    .then(r => r.text())
+    .then(html => {
+      // Create a temporary container to hold the new HTML
+      const tempContainer = document.createElement('div');
+      tempContainer.innerHTML = html.trim();
+
+      // Get the actual panel element from the container
+      const panelNode = tempContainer.firstElementChild;
+      
+      if (panelNode) {
+        // Add the panel to the page's body
+        document.body.appendChild(panelNode);
+
+        // NOW that the panel is in the DOM, we can safely initialize it
         initPanel();
 
+        // Use a short timeout to ensure the element is painted before adding the 'open' class for a smooth transition
         setTimeout(() => {
-          document.getElementById("carbonPanel").classList.add("open");
+          panelNode.classList.add("open");
         }, 50);
-      })
-      .catch(err => console.error("Panel load failed:", err));
-  } else if (panel) {
-    panel.classList.toggle("open");
-  }
+      }
+    })
+    .catch(err => console.error("Panel load failed:", err));
 }
 
 function initPanel() {
