@@ -87,7 +87,7 @@ function saveTime(domain, secondsSpent) {
     usageData[domain] = (usageData[domain] || 0) + secondsSpent;
     co2Data[domain] = (co2Data[domain] || 0) + co2;
 
-    // === Daily History Tracking ===
+    // Daily history
     const today = new Date().toISOString().split("T")[0];
     if (!history[today]) {
       history[today] = { usage: {}, co2: {} };
@@ -95,7 +95,7 @@ function saveTime(domain, secondsSpent) {
     history[today].usage[domain] = (history[today].usage[domain] || 0) + secondsSpent;
     history[today].co2[domain] = (history[today].co2[domain] || 0) + co2;
 
-    // Keep only last 90 days
+    // Keep only 90 days
     const allDates = Object.keys(history).sort();
     while (allDates.length > 90) {
       delete history[allDates[0]];
@@ -171,8 +171,19 @@ chrome.runtime.onSuspend.addListener(() => {
   }
 });
 
-// === Toggle Floating Panel Instead of Opening New Tab ===
+// === Toggle Floating Panel ===
 chrome.action.onClicked.addListener((tab) => {
   if (!tab.id) return;
-  chrome.tabs.sendMessage(tab.id, { action: "togglePanel" });
+
+  chrome.tabs.sendMessage(tab.id, { action: "togglePanel" }, (response) => {
+    if (chrome.runtime.lastError) {
+      // Content script not yet injected → inject it dynamically
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["dashboard.js"]
+      }, () => {
+        chrome.tabs.sendMessage(tab.id, { action: "togglePanel" });
+      });
+    }
+  });
 });
