@@ -46,23 +46,28 @@ function initPanel() {
     chrome.storage.local.set({ userState: stateSelect.value });
   });
 
-  // Close panel
+  // Close panel button
   closeBtn.addEventListener("click", () => {
     document.getElementById("carbonPanel").classList.remove("open");
   });
 
-  // Click outside closes panel
+  // Close if clicked outside
   document.addEventListener("click", (e) => {
     const panel = document.getElementById("carbonPanel");
-    if (panel && !panel.contains(e.target) && !e.target.closest("#carbonPanel") && panel.classList.contains("open")) {
+    if (
+      panel &&
+      !panel.contains(e.target) &&
+      !e.target.closest("#carbonPanel") &&
+      panel.classList.contains("open")
+    ) {
       panel.classList.remove("open");
     }
   });
 
-  // Load usage stats
+  // Load stats
   loadUsageStats();
 
-  // Reset button
+  // Reset data
   document.getElementById("resetBtn").addEventListener("click", resetData);
 }
 
@@ -89,26 +94,30 @@ function loadUsageStats() {
     const today = new Date().toISOString().split("T")[0];
     const todayData = history[today] || { usage: {}, co2: {} };
 
-    // Today’s stats
-    let html = "<ul>";
+    // === Today's usage summary ===
+    let html = "<div class='section-box'><h3>Today's Usage</h3><ul>";
     let totalCO2 = 0;
+    let hasTodayData = false;
+
     for (let domain in todayData.usage) {
       const time = todayData.usage[domain];
       const grams = todayData.co2[domain] || 0;
       totalCO2 += grams;
+      hasTodayData = true;
       html += `<li><b>${domain}</b>: ${formatTime(time)} → ${grams.toFixed(1)} g CO₂</li>`;
     }
-    html += "</ul>";
 
-    container.innerHTML = html || "<p>No usage recorded today.</p>";
+    html += "</ul></div>";
+    container.innerHTML = hasTodayData ? html : "<p>No usage recorded today.</p>";
+
     totalSpan.textContent = totalCO2.toFixed(1);
     equivSpan.textContent = getEquivalent(totalCO2);
 
-    // Past 90 days
-    let histHtml = "<ul>";
+    // === Past history ===
+    let histHtml = "<div class='section-box'><h3>Past 90 Days</h3><ul>";
     const sortedDates = Object.keys(history).sort().reverse();
     const recentDates = sortedDates.slice(0, 90);
-    let hasData = false;
+    let hasHistory = false;
 
     recentDates.forEach(date => {
       if (date === today) return;
@@ -118,12 +127,12 @@ function loadUsageStats() {
       }
       if (dayTotal > 0) {
         histHtml += `<li>${date}: ${dayTotal.toFixed(1)} g CO₂</li>`;
-        hasData = true;
+        hasHistory = true;
       }
     });
 
-    histHtml += "</ul>";
-    historyContainer.innerHTML = hasData ? histHtml : "<p>No past history yet.</p>";
+    histHtml += "</ul></div>";
+    historyContainer.innerHTML = hasHistory ? histHtml : "<p>No past history yet.</p>";
   });
 }
 
