@@ -32,6 +32,7 @@ select:focus {
   border-color: #3399ff;
 }
 
+/* Today's Usage Container */
 #usageContainer {
   font-size: 13px;
   margin-top: 10px;
@@ -41,6 +42,37 @@ select:focus {
   border-radius: 6px;
   padding: 10px;
   border: 1px solid #ddd;
+}
+
+/* History Section */
+#historyContainer {
+  font-size: 13px;
+  margin-top: 10px;
+  background-color: #fff;
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+#historyContainer h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #2c3e50;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 4px;
+}
+
+#historyContainer ul {
+  padding-left: 18px;
+  margin: 0;
+}
+
+#historyContainer li {
+  margin-bottom: 5px;
+  color: #555;
 }
 
 ul {
@@ -53,6 +85,7 @@ li {
   margin-bottom: 6px;
 }
 
+/* Reset Button */
 button {
   padding: 6px 12px;
   font-size: 14px;
@@ -63,6 +96,7 @@ button {
   cursor: pointer;
   width: 100%;
   margin-top: 10px;
+  transition: background-color 0.2s ease-in-out;
 }
 
 button:hover {
