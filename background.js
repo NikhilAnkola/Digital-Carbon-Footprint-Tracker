@@ -102,7 +102,6 @@ function saveTime(domain, secondsSpent) {
       allDates.shift();
     }
 
-    // Save all
     chrome.storage.local.set({ usage: usageData, co2: co2Data, history: history });
   });
 }
