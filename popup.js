@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.set({ userState: selected });
   });
 
-  // Load and render CO2 + usage stats
+  // Load and render stats
   loadUsageStats();
 });
 
@@ -29,23 +29,27 @@ function formatTime(seconds) {
 function getEquivalent(co2g) {
   const kmDriven = (co2g / 120).toFixed(2); // 120 g/km
   const phoneCharges = Math.floor(co2g / 5); // 5g per charge
-  return `${kmDriven} km drive or ${phoneCharges}% phone charge`;
+  return `${kmDriven} km drive or ${phoneCharges} phone charges`;
 }
 
 function loadUsageStats() {
-  chrome.storage.local.get(["usage", "co2"], (res) => {
-    const usage = res.usage || {};
-    const co2 = res.co2 || {};
+  chrome.storage.local.get(["history"], (res) => {
+    const history = res.history || {};
     const container = document.getElementById("usageContainer");
     const totalSpan = document.getElementById("totalCO2");
     const equivSpan = document.getElementById("co2Equivalent");
+    const historyContainer = document.getElementById("historyContainer");
 
-    let html = "<ul>";
+    // Get today's date
+    const today = new Date().toISOString().split("T")[0];
+    const todayData = history[today] || { usage: {}, co2: {} };
+
+    let html = "<h3>Today</h3><ul>";
     let totalCO2 = 0;
 
-    for (let domain in usage) {
-      const time = usage[domain];
-      const grams = co2[domain] || 0;
+    for (let domain in todayData.usage) {
+      const time = todayData.usage[domain];
+      const grams = todayData.co2[domain] || 0;
       totalCO2 += grams;
       html += `<li><b>${domain}</b>: ${formatTime(time)} → ${grams.toFixed(1)} g CO₂</li>`;
     }
@@ -54,15 +58,38 @@ function loadUsageStats() {
     container.innerHTML = html;
     totalSpan.textContent = totalCO2.toFixed(1);
     equivSpan.textContent = getEquivalent(totalCO2);
+
+    // === Show Past 7 Days History ===
+    let histHtml = "<h3>Past 7 Days</h3>";
+    const sortedDates = Object.keys(history).sort().reverse();
+    const recentDates = sortedDates.slice(0, 7);
+
+    if (recentDates.length > 1) {
+      histHtml += "<ul>";
+      recentDates.forEach(date => {
+        if (date === today) return; // skip today's entry
+        let dayTotalCO2 = 0;
+        for (let d in history[date].co2) {
+          dayTotalCO2 += history[date].co2[d];
+        }
+        histHtml += `<li>${date}: ${dayTotalCO2.toFixed(1)} g CO₂</li>`;
+      });
+      histHtml += "</ul>";
+    } else {
+      histHtml += "<p>No past history yet.</p>";
+    }
+
+    historyContainer.innerHTML = histHtml;
   });
 }
 
+// === Reset Button ===
 document.getElementById("resetBtn").addEventListener("click", () => {
-  const confirmed = confirm("Are you sure you want to reset all tracking data?");
+  const confirmed = confirm("Are you sure you want to reset ALL tracking data?");
   if (confirmed) {
-    chrome.storage.local.remove(["usage", "co2"], () => {
+    chrome.storage.local.remove(["usage", "co2", "history"], () => {
       alert("All data reset successfully.");
-      location.reload(); // Refresh popup UI
+      location.reload();
     });
   }
 });
