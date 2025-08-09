@@ -27,8 +27,8 @@ function formatTime(seconds) {
 
 // Convert grams CO2 to real-world equivalent
 function getEquivalent(co2g) {
-  const kmDriven = (co2g / 120).toFixed(2); // 120 g/km
-  const phoneCharges = Math.floor(co2g / 5); // 5g per charge
+  const kmDriven = (co2g / 120).toFixed(2);
+  const phoneCharges = Math.floor(co2g / 5);
   return `${kmDriven} km drive or ${phoneCharges} phone charges`;
 }
 
@@ -40,7 +40,6 @@ function loadUsageStats() {
     const equivSpan = document.getElementById("co2Equivalent");
     const historyContainer = document.getElementById("historyContainer");
 
-    // Get today's date
     const today = new Date().toISOString().split("T")[0];
     const todayData = history[today] || { usage: {}, co2: {} };
 
@@ -59,15 +58,15 @@ function loadUsageStats() {
     totalSpan.textContent = totalCO2.toFixed(1);
     equivSpan.textContent = getEquivalent(totalCO2);
 
-    // === Show Past 7 Days History ===
-    let histHtml = "<h3>Past 7 Days</h3>";
+    // Show Past 90 Days
+    let histHtml = "<h3>Past 90 Days</h3>";
     const sortedDates = Object.keys(history).sort().reverse();
-    const recentDates = sortedDates.slice(0, 7);
+    const recentDates = sortedDates.slice(0, 90);
 
     if (recentDates.length > 1) {
       histHtml += "<ul>";
       recentDates.forEach(date => {
-        if (date === today) return; // skip today's entry
+        if (date === today) return;
         let dayTotalCO2 = 0;
         for (let d in history[date].co2) {
           dayTotalCO2 += history[date].co2[d];
@@ -83,7 +82,7 @@ function loadUsageStats() {
   });
 }
 
-// === Reset Button ===
+// Reset Button
 document.getElementById("resetBtn").addEventListener("click", () => {
   const confirmed = confirm("Are you sure you want to reset ALL tracking data?");
   if (confirmed) {
