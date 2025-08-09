@@ -1,5 +1,4 @@
 // === Configuration Tables ===
-
 const DATA_USAGE_PER_HOUR = {
   "youtube.com": 1.5,
   "netflix.com": 3.0,
@@ -49,13 +48,11 @@ const STATE_EMISSION_FACTOR = {
 };
 
 // === Runtime Variables ===
-
 let currentTabId = null;
 let currentDomain = null;
 let startTimestamp = Date.now();
 
 // === Helpers ===
-
 function getDomainFromUrl(url) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -76,28 +73,44 @@ function estimateCO2(domain, seconds, userState) {
 function saveTime(domain, secondsSpent) {
   if (!domain || !secondsSpent) return;
 
-  chrome.storage.local.get(["usage", "co2", "userState"], function (result) {
+  chrome.storage.local.get(["usage", "co2", "userState", "history"], function (result) {
     const usageData = result.usage || {};
     const co2Data = result.co2 || {};
     const userState = result.userState;
+    const history = result.history || {};
 
     if (!userState || !(userState in STATE_EMISSION_FACTOR)) return;
 
     const co2 = estimateCO2(domain, secondsSpent, userState);
 
+    // Update totals
     usageData[domain] = (usageData[domain] || 0) + secondsSpent;
     co2Data[domain] = (co2Data[domain] || 0) + co2;
 
-    chrome.storage.local.set({ usage: usageData, co2: co2Data });
+    // === Daily History Tracking ===
+    const today = new Date().toISOString().split("T")[0];
+    if (!history[today]) {
+      history[today] = { usage: {}, co2: {} };
+    }
+    history[today].usage[domain] = (history[today].usage[domain] || 0) + secondsSpent;
+    history[today].co2[domain] = (history[today].co2[domain] || 0) + co2;
+
+    // Keep only last 90 days
+    const allDates = Object.keys(history).sort();
+    while (allDates.length > 90) {
+      delete history[allDates[0]];
+      allDates.shift();
+    }
+
+    // Save all
+    chrome.storage.local.set({ usage: usageData, co2: co2Data, history: history });
   });
 }
 
-// === Tab Switch ===
-
+// === Track Tab Switch ===
 chrome.tabs.onActivated.addListener(function (info) {
   chrome.tabs.get(info.tabId, function (tab) {
     if (!tab.url) return;
-
     const domain = getDomainFromUrl(tab.url);
     const now = Date.now();
 
@@ -112,8 +125,7 @@ chrome.tabs.onActivated.addListener(function (info) {
   });
 });
 
-// === URL Change in Same Tab ===
-
+// === Track URL Change in Same Tab ===
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (tab.active && changeInfo.url) {
     const domain = getDomainFromUrl(changeInfo.url);
@@ -130,12 +142,10 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   }
 });
 
-// === AFK Support (1s interval) ===
-
+// === AFK-Friendly Polling (1s) ===
 setInterval(() => {
   chrome.windows.getLastFocused({ populate: true }, (window) => {
     if (!window || !window.focused || !window.tabs) return;
-
     const activeTab = window.tabs.find(t => t.active);
     if (!activeTab || !activeTab.url) return;
 
@@ -151,10 +161,9 @@ setInterval(() => {
       startTimestamp = now;
     }
   });
-}, 1000); // every 1 second
+}, 1000);
 
-// === Final Save on Suspend ===
-
+// === Save on Extension Suspend ===
 chrome.runtime.onSuspend.addListener(() => {
   const now = Date.now();
   const timeSpent = Math.floor((now - startTimestamp) / 1000);
