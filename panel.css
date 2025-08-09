@@ -1,71 +1,70 @@
-body {
+#carbonPanel {
+  position: fixed;
+  top: 0;
+  right: -350px;
+  width: 320px;
+  height: 100%;
+  background: #f4f4f4;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.2);
+  padding: 12px;
   font-family: Arial, sans-serif;
-  background-color: #f4f6f8;
-  margin: 0;
-  padding: 0;
+  font-size: 14px;
+  overflow-y: auto;
+  transition: right 0.3s ease-in-out;
+  z-index: 999999;
 }
 
-header {
-  background-color: #2ecc71;
-  color: white;
-  text-align: center;
-  padding: 20px;
+#carbonPanel.open {
+  right: 0;
 }
 
-header h1 {
-  margin: 0;
-  font-size: 1.8em;
+#panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 15px;
+  margin-bottom: 10px;
 }
 
-main {
-  padding: 20px;
-  max-width: 800px;
-  margin: auto;
-}
-
-.card {
-  background-color: white;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 20px;
-  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+#panelHeader button {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
 }
 
 label {
   font-weight: bold;
-  color: #333;
+  margin-top: 10px;
   display: block;
-  margin-bottom: 8px;
 }
 
 select {
   width: 100%;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 6px;
   border: 1px solid #ccc;
+  border-radius: 6px;
 }
 
 #usageContainer, #historyContainer {
-  font-size: 14px;
-  max-height: 250px;
-  overflow-y: auto;
-  padding: 8px;
-  border: 1px solid #eee;
+  background: #fff;
+  padding: 10px;
   border-radius: 6px;
-  background-color: #fafafa;
+  margin-top: 8px;
+  border: 1px solid #ddd;
 }
 
-button {
-  width: 100%;
-  padding: 10px;
-  font-size: 16px;
-  background-color: #e74c3c;
+button#resetBtn {
+  padding: 8px;
+  background: #e74c3c;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
+  width: 100%;
 }
 
-button:hover {
-  background-color: #c0392b;
+button#resetBtn:hover {
+  background: #c0392b;
 }
