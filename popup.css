@@ -44,19 +44,31 @@ select:focus {
   border: 1px solid #ddd;
 }
 
+#usageContainer h3 {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #eee;
+  margin-top: 0;
+}
+
 /* History Section */
 #historyContainer {
-  font-size: 13px;
+  font-size: 12.5px;
   margin-top: 10px;
   background-color: #fff;
   border-radius: 6px;
   padding: 10px;
   border: 1px solid #ddd;
-  max-height: 150px;
+  max-height: 180px;
   overflow-y: auto;
 }
 
 #historyContainer h3 {
+  position: sticky;
+  top: 0;
+  background: #fff;
   margin-top: 0;
   margin-bottom: 8px;
   font-size: 14px;
