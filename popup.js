@@ -29,7 +29,7 @@ function formatTime(seconds) {
 function getEquivalent(co2g) {
   const kmDriven = (co2g / 120).toFixed(2); // 120 g/km
   const phoneCharges = Math.floor(co2g / 5); // 5g per charge
-  return `${kmDriven} km drive or ${phoneCharges} phone charges`;
+  return `${kmDriven} km drive or ${phoneCharges}% phone charge`;
 }
 
 function loadUsageStats() {
