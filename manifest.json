@@ -29,7 +29,10 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["panel.css"],
+      "resources": [
+        "panel.html", 
+        "panel.css"
+      ],
       "matches": ["<all_urls>"]
     }
   ]
