@@ -1,20 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Carbon Tracker Panel</title>
-  <link rel="stylesheet" href="panel.css">
-</head>
-<body>
-  <div id="carbonPanel">
-    <!-- === HEADER === -->
+<div id="carbonPanel">
     <div id="panelHeader">
       <span>🌱 Digital Carbon Tracker</span>
       <button id="closePanel" title="Close">✖</button>
     </div>
 
-    <!-- === STATE SELECT === -->
     <div class="section">
       <label for="stateSelect"><b>Select your state:</b></label>
       <select id="stateSelect">
@@ -52,7 +41,6 @@
 
     <hr>
 
-    <!-- === TODAY'S USAGE === -->
     <div class="section">
       <h3>Today's Usage Summary</h3>
       <div id="usageContainer"><p>Loading...</p></div>
@@ -62,30 +50,21 @@
         <li><b>Equivalent to:</b> <span id="co2Equivalent">–</span></li>
       </ul>
 
-      <!-- Pie Chart for Today -->
       <canvas id="todayPieChart" width="250" height="250"></canvas>
     </div>
 
     <hr>
 
-    <!-- === HISTORY === -->
     <div class="section" id="historyContainer">
       <h3>Past 90 Days</h3>
       <p>Loading history...</p>
 
-      <!-- Bar Chart for Past 7 Days -->
       <canvas id="historyBarChart" width="300" height="200"></canvas>
     </div>
 
     <hr>
 
-    <!-- === RESET BUTTON === -->
     <div class="section">
       <button id="resetBtn" class="danger">Reset All Data</button>
     </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="dashboard.js"></script>
-</body>
-</html>
+</div>
