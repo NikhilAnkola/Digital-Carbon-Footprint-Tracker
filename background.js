@@ -1,4 +1,5 @@
 // === Configuration Tables ===
+
 const DATA_USAGE_PER_HOUR = {
   "youtube.com": 1.5,
   "netflix.com": 3.0,
@@ -48,11 +49,13 @@ const STATE_EMISSION_FACTOR = {
 };
 
 // === Runtime Variables ===
+
 let currentTabId = null;
 let currentDomain = null;
 let startTimestamp = Date.now();
 
 // === Helpers ===
+
 function getDomainFromUrl(url) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -73,11 +76,10 @@ function estimateCO2(domain, seconds, userState) {
 function saveTime(domain, secondsSpent) {
   if (!domain || !secondsSpent) return;
 
-  chrome.storage.local.get(["usage", "co2", "userState", "history"], function (result) {
+  chrome.storage.local.get(["usage", "co2", "userState"], function (result) {
     const usageData = result.usage || {};
     const co2Data = result.co2 || {};
     const userState = result.userState;
-    const history = result.history || {};
 
     if (!userState || !(userState in STATE_EMISSION_FACTOR)) return;
 
@@ -86,27 +88,16 @@ function saveTime(domain, secondsSpent) {
     usageData[domain] = (usageData[domain] || 0) + secondsSpent;
     co2Data[domain] = (co2Data[domain] || 0) + co2;
 
-    const today = new Date().toISOString().split("T")[0];
-    if (!history[today]) {
-      history[today] = { usage: {}, co2: {} };
-    }
-    history[today].usage[domain] = (history[today].usage[domain] || 0) + secondsSpent;
-    history[today].co2[domain] = (history[today].co2[domain] || 0) + co2;
-
-    const allDates = Object.keys(history).sort();
-    while (allDates.length > 90) {
-      delete history[allDates[0]];
-      allDates.shift();
-    }
-
-    chrome.storage.local.set({ usage: usageData, co2: co2Data, history: history });
+    chrome.storage.local.set({ usage: usageData, co2: co2Data });
   });
 }
 
-// === Track Tab Switch ===
+// === Tab Switch ===
+
 chrome.tabs.onActivated.addListener(function (info) {
   chrome.tabs.get(info.tabId, function (tab) {
     if (!tab.url) return;
+
     const domain = getDomainFromUrl(tab.url);
     const now = Date.now();
 
@@ -121,7 +112,8 @@ chrome.tabs.onActivated.addListener(function (info) {
   });
 });
 
-// === Track URL Change in Same Tab ===
+// === URL Change in Same Tab ===
+
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (tab.active && changeInfo.url) {
     const domain = getDomainFromUrl(changeInfo.url);
@@ -138,10 +130,12 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   }
 });
 
-// === AFK-Friendly Polling (1s) ===
+// === AFK Support (1s interval) ===
+
 setInterval(() => {
   chrome.windows.getLastFocused({ populate: true }, (window) => {
     if (!window || !window.focused || !window.tabs) return;
+
     const activeTab = window.tabs.find(t => t.active);
     if (!activeTab || !activeTab.url) return;
 
@@ -157,38 +151,14 @@ setInterval(() => {
       startTimestamp = now;
     }
   });
-}, 1000);
+}, 1000); // every 1 second
 
-// === Save on Extension Suspend ===
+// === Final Save on Suspend ===
+
 chrome.runtime.onSuspend.addListener(() => {
   const now = Date.now();
   const timeSpent = Math.floor((now - startTimestamp) / 1000);
   if (currentDomain && timeSpent > 0) {
     saveTime(currentDomain, timeSpent);
   }
-});
-
-
-// === [UPDATED] Inject dashboard.js ONLY when clicked ===
-chrome.action.onClicked.addListener((tab) => {
-  // First, check if the URL is a restricted page.
-  if (!tab.id || !tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("https://chrome.google.com/")) {
-    console.log("Cannot run on a restricted page.");
-    return; // Exit the function early to prevent errors.
-  }
-
-  // If the page is valid, try to send a message to the content script.
-  chrome.tabs.sendMessage(tab.id, { action: "togglePanel" }, (response) => {
-    // Check if an error occurred (e.g., the content script wasn't there).
-    if (chrome.runtime.lastError) {
-      // If the content script is not injected yet, inject it now.
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ["dashboard.js"]
-      }, () => {
-        // After the script is successfully injected, send the message again to open the panel.
-        chrome.tabs.sendMessage(tab.id, { action: "togglePanel" });
-      });
-    }
-  });
 });
