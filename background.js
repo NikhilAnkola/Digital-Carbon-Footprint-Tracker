@@ -48,6 +48,70 @@ const STATE_EMISSION_FACTOR = {
   "West Bengal": 782
 };
 
+// === New Dynamic Streaming Data ===
+
+// runtime dynamic map: domain -> { gbPerHour, lastUpdated }
+const DYNAMIC_GB_RATES = {};
+
+// resolution (video height) -> estimated GB/hour mapping
+const RESOLUTION_GB_MAP = {
+  2160: 7.0,   // 4K
+  1440: 4.5,   // 2K
+  1080: 3.0,   // 1080p
+  720: 1.5,    // 720p
+  480: 0.7,
+  360: 0.25,
+  240: 0.15
+};
+
+// fallback per-category default gb/hour
+const CATEGORY_DEFAULT_GB = {
+  streaming: 1.5,
+  social: 0.5,
+  messaging: 0.02,
+  docs: 0.05,
+  code: 0.05,
+  default: 0.2
+};
+
+function getCategoryFromDomain(domain) {
+  if (!domain) return 'default';
+  domain = domain.toLowerCase();
+  if (domain.includes('youtube') || domain.includes('netflix') || domain.includes('primevideo') || domain.includes('twitch') || domain.includes('hotstar')) return 'streaming';
+  if (domain.includes('instagram') || domain.includes('facebook') || domain.includes('twitter') || domain.includes('tiktok')) return 'social';
+  if (domain.includes('whatsapp') || domain.includes('telegram') || domain.includes('messenger')) return 'messaging';
+  if (domain.includes('docs.google') || domain.includes('office') || domain.includes('slack')) return 'docs';
+  if (domain.includes('github') || domain.includes('gitlab')) return 'code';
+  return 'default';
+}
+
+function calcGbPerHourFromStats({ resolution, downlink, avgReqMB, domain }) {
+  // 1) Map resolution to GB/hour if available
+  if (resolution && typeof resolution === 'number') {
+    const keys = Object.keys(RESOLUTION_GB_MAP).map(Number).sort((a, b) => b - a);
+    for (let key of keys) {
+      if (resolution >= key) return RESOLUTION_GB_MAP[key];
+    }
+  }
+
+  // 2) Use downlink heuristic
+  if (downlink && typeof downlink === 'number') {
+    if (downlink >= 20) return CATEGORY_DEFAULT_GB.streaming * 2.0;
+    if (downlink >= 5) return CATEGORY_DEFAULT_GB.streaming;
+    return CATEGORY_DEFAULT_GB.streaming * 0.6;
+  }
+
+  // 3) Use average request size as hint
+  if (avgReqMB && typeof avgReqMB === 'number') {
+    if (avgReqMB >= 2) return CATEGORY_DEFAULT_GB.streaming * 2.0;
+    if (avgReqMB >= 0.5) return CATEGORY_DEFAULT_GB.streaming;
+  }
+
+  // 4) Fallback to category default
+  const cat = getCategoryFromDomain(domain);
+  return CATEGORY_DEFAULT_GB[cat] || CATEGORY_DEFAULT_GB.default;
+}
+
 // === Runtime Variables ===
 
 let currentTabId = null;
@@ -66,7 +130,8 @@ function getDomainFromUrl(url) {
 
 function estimateCO2(domain, seconds, userState) {
   const hours = seconds / 3600;
-  const gbPerHour = DATA_USAGE_PER_HOUR[domain] || DATA_USAGE_PER_HOUR["default"];
+  const dynamic = DYNAMIC_GB_RATES[domain];
+  const gbPerHour = (dynamic && dynamic.gbPerHour) || DATA_USAGE_PER_HOUR[domain] || DATA_USAGE_PER_HOUR["default"];
   const gbUsed = gbPerHour * hours;
   const electricityUsed = gbUsed * ELECTRICITY_PER_GB_KWH;
   const emissionFactor = STATE_EMISSION_FACTOR[userState];
@@ -91,6 +156,21 @@ function saveTime(domain, secondsSpent) {
     chrome.storage.local.set({ usage: usageData, co2: co2Data });
   });
 }
+
+// === Listen for dynamic stats from content scripts ===
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || message.type !== 'VIDEO_STATS') return;
+  const domain = message.domain;
+  const gb = calcGbPerHourFromStats({
+    resolution: message.resolution,
+    downlink: message.downlink,
+    avgReqMB: message.avgReqMB,
+    domain
+  });
+
+  DYNAMIC_GB_RATES[domain] = { gbPerHour: gb, lastUpdated: Date.now() };
+  chrome.storage.local.set({ dynamicRates: DYNAMIC_GB_RATES }, () => { });
+});
 
 // === Tab Switch ===
 
