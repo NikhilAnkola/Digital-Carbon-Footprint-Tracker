@@ -158,36 +158,21 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
   const dateStr = getLocalDateString();
   chrome.storage.local.get(['dailyHistory'], (res) => {
     const history = Array.isArray(res.dailyHistory) ? res.dailyHistory : [];
-
-    // find today's entry
     let today = history.find(e => e.date === dateStr);
     if (!today) {
-      today = {
-        date: dateStr,
-        domains: {},
-        totals: { seconds: 0, gb: 0, co2: 0 }
-      };
+      today = { date: dateStr, domains: {}, totals: { seconds: 0, gb: 0, co2: 0 } };
       history.push(today);
     }
-
-    // ensure domain entry exists and update
     const domainEntry = today.domains[domain] || { seconds: 0, gb: 0, co2: 0 };
-    domainEntry.seconds = (domainEntry.seconds || 0) + secondsSpent;
-    domainEntry.gb = (domainEntry.gb || 0) + gbUsed;
-    domainEntry.co2 = (domainEntry.co2 || 0) + co2;
+    domainEntry.seconds += secondsSpent;
+    domainEntry.gb += gbUsed;
+    domainEntry.co2 += co2;
     today.domains[domain] = domainEntry;
-
-    // update totals
-    today.totals.seconds = (today.totals.seconds || 0) + secondsSpent;
-    today.totals.gb = (today.totals.gb || 0) + gbUsed;
-    today.totals.co2 = (today.totals.co2 || 0) + co2;
-
-    // Sort history by date ascending (oldest first), prune to last 28 days
+    today.totals.seconds += secondsSpent;
+    today.totals.gb += gbUsed;
+    today.totals.co2 += co2;
     history.sort((a, b) => new Date(a.date) - new Date(b.date));
-    while (history.length > 28) {
-      history.shift();
-    }
-
+    while (history.length > 28) history.shift();
     chrome.storage.local.set({ dailyHistory: history });
   });
 }
@@ -222,17 +207,28 @@ function saveTime(domain, secondsSpent) {
 
 // === Listen for dynamic stats from content scripts ===
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || message.type !== 'VIDEO_STATS') return;
-  const domain = message.domain;
-  const gb = calcGbPerHourFromStats({
-    resolution: message.resolution,
-    downlink: message.downlink,
-    avgReqMB: message.avgReqMB,
-    domain
-  });
+  if (!message) return;
 
-  DYNAMIC_GB_RATES[domain] = { gbPerHour: gb, lastUpdated: Date.now() };
-  chrome.storage.local.set({ dynamicRates: DYNAMIC_GB_RATES }, () => { });
+  // Existing: VIDEO_STATS handler
+  if (message.type === 'VIDEO_STATS') {
+    const domain = message.domain;
+    const gb = calcGbPerHourFromStats({
+      resolution: message.resolution,
+      downlink: message.downlink,
+      avgReqMB: message.avgReqMB,
+      domain
+    });
+    DYNAMIC_GB_RATES[domain] = { gbPerHour: gb, lastUpdated: Date.now() };
+    chrome.storage.local.set({ dynamicRates: DYNAMIC_GB_RATES }, () => {});
+  }
+
+  // NEW: Handle request from popup.js to get dailyHistory
+  if (message.type === 'GET_DAILY_HISTORY') {
+    chrome.storage.local.get(['dailyHistory'], (res) => {
+      sendResponse({ dailyHistory: res.dailyHistory || [] });
+    });
+    return true; // keep the message channel open for async sendResponse
+  }
 });
 
 // === Tab Switch ===
@@ -305,3 +301,10 @@ chrome.runtime.onSuspend.addListener(() => {
     saveTime(currentDomain, timeSpent);
   }
 });
+
+// ====== ML Model Parameters ======
+const CO2_MODEL = { m: 2.3456, b: 50.1234 };
+function predictFutureCO2(daysAhead) {
+  return CO2_MODEL.m * daysAhead + CO2_MODEL.b;
+}
+console.log("Predicted CO₂ emissions in 7 days:", predictFutureCO2(7).toFixed(2), "grams");
