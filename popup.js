@@ -14,6 +14,15 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.set({ userState: selected });
   });
 
+  // Date inputs for history filtering
+  const startInput = document.getElementById("startDateInput");
+  const endInput = document.getElementById("endDateInput");
+
+  if (startInput && endInput) {
+    startInput.addEventListener("change", loadHistory);
+    endInput.addEventListener("change", loadHistory);
+  }
+
   // Load and render CO2 + usage stats
   loadUsageStats();
 
@@ -87,6 +96,21 @@ function loadHistory() {
       return;
     }
 
+    // Apply date filter if inputs are present
+    const startInput = document.getElementById("startDateInput");
+    const endInput = document.getElementById("endDateInput");
+
+    let startDate = startInput && startInput.value ? new Date(startInput.value) : null;
+    let endDate = endInput && endInput.value ? new Date(endInput.value) : null;
+
+    // Filter history by date
+    let filteredHistory = history.filter(day => {
+      const dayDate = new Date(day.date);
+      if (startDate && dayDate < startDate) return false;
+      if (endDate && dayDate > endDate) return false;
+      return true;
+    });
+
     let html = "<table border='1' style='width:100%; border-collapse: collapse;'>";
     html += "<tr><th>Date</th><th>Total Time</th><th>Data Used (GB)</th><th>CO₂</th></tr>";
 
@@ -115,4 +139,14 @@ document.getElementById("resetBtn").addEventListener("click", () => {
       }
     );
   }
+});
+
+// Predict future CO₂
+document.addEventListener("DOMContentLoaded", function () {
+  document.getElementById("predictBtn").addEventListener("click", function () {
+    const daysAhead = 7; // or from input
+    chrome.runtime.sendMessage({ action: "predictFutureCO2", days: daysAhead }, function (response) {
+      console.log(`Predicted CO₂ emissions in ${daysAhead} days: ${response.prediction} grams`);
+    });
+  });
 });
