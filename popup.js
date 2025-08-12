@@ -29,7 +29,7 @@ function formatTime(seconds) {
 function getEquivalent(co2g) {
   const kmDriven = (co2g / 120).toFixed(2); // 120 g/km
   const phoneCharges = Math.floor(co2g / 5); // 5g per charge
-  return `${kmDriven} km drive or ${phoneCharges} phone charges`;
+  return `${kmDriven} km driven or ${phoneCharges}% phone charged`;
 }
 
 function loadUsageStats() {
@@ -57,6 +57,7 @@ function loadUsageStats() {
   });
 }
 
+// Currently only resets the usage and co2 data, doesn't reset the userState
 document.getElementById("resetBtn").addEventListener("click", () => {
   const confirmed = confirm("Are you sure you want to reset all tracking data?");
   if (confirmed) {
