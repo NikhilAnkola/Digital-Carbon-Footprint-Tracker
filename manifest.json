@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Digital Carbon Footprinting Tracker",
+  "name": "Digital Carbon Footprint Tracker",
   "version": "1.0",
   "description": "Tracks time spent on websites and estimates digital CO₂ emissions.",
   "permissions": [
