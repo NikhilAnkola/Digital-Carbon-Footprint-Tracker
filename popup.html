@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Digital Carbon Footprint Tracker</title>
   <link rel="stylesheet" href="popup.css">
-  <script src="popup.js" defer></script>
 </head>
 <body>
   <label for="stateSelect"><b>Select your state:</b></label>
@@ -50,11 +49,21 @@
     <li><b>Equivalent to:</b> <span id="co2Equivalent">–</span></li>
   </ul>
 
+  <div>
+    <label>Days Ahead:</label>
+    <input type="number" id="daysAhead" value="7" min="1">
+    <button id="predictBtn">Predict</button>
+    <!-- Added fallback text to avoid "prediction" undefined errors -->
+    <p id="predictionResult">Prediction will appear here.</p>
+  </div>
+
   <hr />
   <h3>Last 28 Days History</h3>
   <div id="historyContainer"><p>Loading history...</p></div>
 
   <hr />
   <button id="resetBtn">Reset All Data</button>
+
+  <script src="popup.js" defer></script>
 </body>
 </html>
