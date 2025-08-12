@@ -13,6 +13,19 @@
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.netflix.com/*",
+        "*://*.twitch.tv/*",
+        "*://*.primevideo.com/*",
+        "*://*.hotstar.com/*"
+      ],
+      "js": ["content_video.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icons/icon128.png"
