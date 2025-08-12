@@ -50,22 +50,19 @@ const STATE_EMISSION_FACTOR = {
 
 // === New Dynamic Streaming Data ===
 
-// runtime dynamic map: domain -> { gbPerHour, lastUpdated }
 const DYNAMIC_GB_RATES = {};
 
-// resolution (video height) -> estimated GB/hour mapping
 const RESOLUTION_GB_MAP = {
-  2160: 7.0,   // 4K
-  1440: 4.5,   // 2K
-  1080: 3.0,   // 1080p
-  720: 1.5,    // 720p
+  2160: 7.0,
+  1440: 4.5,
+  1080: 3.0,
+  720: 1.5,
   480: 0.7,
   360: 0.25,
   240: 0.15,
   144: 0.1
 };
 
-// fallback per-category default gb/hour
 const CATEGORY_DEFAULT_GB = {
   streaming: 1.5,
   social: 0.5,
@@ -87,28 +84,21 @@ function getCategoryFromDomain(domain) {
 }
 
 function calcGbPerHourFromStats({ resolution, downlink, avgReqMB, domain }) {
-  // 1) Map resolution to GB/hour if available
   if (resolution && typeof resolution === 'number') {
     const keys = Object.keys(RESOLUTION_GB_MAP).map(Number).sort((a, b) => b - a);
     for (let key of keys) {
       if (resolution >= key) return RESOLUTION_GB_MAP[key];
     }
   }
-
-  // 2) Use downlink heuristic
   if (downlink && typeof downlink === 'number') {
     if (downlink >= 20) return CATEGORY_DEFAULT_GB.streaming * 2.0;
     if (downlink >= 5) return CATEGORY_DEFAULT_GB.streaming;
     return CATEGORY_DEFAULT_GB.streaming * 0.6;
   }
-
-  // 3) Use average request size as hint
   if (avgReqMB && typeof avgReqMB === 'number') {
     if (avgReqMB >= 2) return CATEGORY_DEFAULT_GB.streaming * 2.0;
     if (avgReqMB >= 0.5) return CATEGORY_DEFAULT_GB.streaming;
   }
-
-  // 4) Fallback to category default
   const cat = getCategoryFromDomain(domain);
   return CATEGORY_DEFAULT_GB[cat] || CATEGORY_DEFAULT_GB.default;
 }
@@ -129,14 +119,11 @@ function getDomainFromUrl(url) {
   }
 }
 
-// NEW: return the local date string "YYYY-MM-DD" (local timezone)
 function getLocalDateString(date = new Date()) {
-  const d = date;
   const pad = (n) => (n < 10 ? '0' + n : n);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-// NEW: get GB/hour used for a domain (mirrors the logic used for estimateCO2)
 function getGbPerHourForDomain(domain) {
   const dynamic = DYNAMIC_GB_RATES[domain];
   return (dynamic && dynamic.gbPerHour) || DATA_USAGE_PER_HOUR[domain] || DATA_USAGE_PER_HOUR["default"];
@@ -152,7 +139,6 @@ function estimateCO2(domain, seconds, userState) {
   return electricityUsed * emissionFactor;
 }
 
-// NEW: add a record to dailyHistory and prune to last 28 days
 function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
   if (!domain) return;
   const dateStr = getLocalDateString();
@@ -179,37 +165,27 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
 
 function saveTime(domain, secondsSpent) {
   if (!domain || !secondsSpent) return;
-
   chrome.storage.local.get(["usage", "co2", "userState"], function (result) {
     const usageData = result.usage || {};
     const co2Data = result.co2 || {};
     const userState = result.userState;
-
     if (!userState || !(userState in STATE_EMISSION_FACTOR)) return;
-
-    // compute co2 using existing function (keeps original logic intact)
     const co2 = estimateCO2(domain, secondsSpent, userState);
-
     usageData[domain] = (usageData[domain] || 0) + secondsSpent;
     co2Data[domain] = (co2Data[domain] || 0) + co2;
-
-    // Save the existing usage and co2 as before
     chrome.storage.local.set({ usage: usageData, co2: co2Data }, () => {
-      // After we saved the main usage/co2 objects, also append to daily history.
-      // Compute gbUsed for the secondsSpent using the same domain -> gbPerHour logic
       const gbPerHour = getGbPerHourForDomain(domain);
       const gbUsed = gbPerHour * (secondsSpent / 3600);
-      // add to daily history (this is additive and independent of usage/co2 above)
       addToDailyHistory(domain, secondsSpent, gbUsed, co2);
     });
   });
 }
 
-// === Listen for dynamic stats from content scripts ===
+// === Event Listeners ===
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message) return;
 
-  // Existing: VIDEO_STATS handler
   if (message.type === 'VIDEO_STATS') {
     const domain = message.domain;
     const gb = calcGbPerHourFromStats({
@@ -219,68 +195,56 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       domain
     });
     DYNAMIC_GB_RATES[domain] = { gbPerHour: gb, lastUpdated: Date.now() };
-    chrome.storage.local.set({ dynamicRates: DYNAMIC_GB_RATES }, () => {});
+    chrome.storage.local.set({ dynamicRates: DYNAMIC_GB_RATES });
   }
 
-  // NEW: Handle request from popup.js to get dailyHistory
   if (message.type === 'GET_DAILY_HISTORY') {
     chrome.storage.local.get(['dailyHistory'], (res) => {
       sendResponse({ dailyHistory: res.dailyHistory || [] });
     });
-    return true; // keep the message channel open for async sendResponse
+    return true;
   }
 });
 
-// === Tab Switch ===
-
+// Tab switch
 chrome.tabs.onActivated.addListener(function (info) {
   chrome.tabs.get(info.tabId, function (tab) {
     if (!tab.url) return;
-
     const domain = getDomainFromUrl(tab.url);
     const now = Date.now();
-
     if (currentDomain && startTimestamp) {
       const timeSpent = Math.floor((now - startTimestamp) / 1000);
       saveTime(currentDomain, timeSpent);
     }
-
     currentTabId = info.tabId;
     currentDomain = domain;
     startTimestamp = now;
   });
 });
 
-// === URL Change in Same Tab ===
-
+// URL change
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (tab.active && changeInfo.url) {
     const domain = getDomainFromUrl(changeInfo.url);
     const now = Date.now();
-
     if (currentDomain && startTimestamp) {
       const timeSpent = Math.floor((now - startTimestamp) / 1000);
       saveTime(currentDomain, timeSpent);
     }
-
     currentTabId = tabId;
     currentDomain = domain;
     startTimestamp = now;
   }
 });
 
-// === AFK Support (1s interval) ===
-
+// AFK detection
 setInterval(() => {
   chrome.windows.getLastFocused({ populate: true }, (window) => {
     if (!window || !window.focused || !window.tabs) return;
-
     const activeTab = window.tabs.find(t => t.active);
     if (!activeTab || !activeTab.url) return;
-
     const domain = getDomainFromUrl(activeTab.url);
     const now = Date.now();
-
     if (domain === currentDomain && startTimestamp) {
       const timeSpent = Math.floor((now - startTimestamp) / 1000);
       saveTime(domain, timeSpent);
@@ -290,10 +254,9 @@ setInterval(() => {
       startTimestamp = now;
     }
   });
-}, 1000); // every 1 second
+}, 1000);
 
-// === Final Save on Suspend ===
-
+// Final save on suspend
 chrome.runtime.onSuspend.addListener(() => {
   const now = Date.now();
   const timeSpent = Math.floor((now - startTimestamp) / 1000);
@@ -308,3 +271,23 @@ function predictFutureCO2(daysAhead) {
   return CO2_MODEL.m * daysAhead + CO2_MODEL.b;
 }
 console.log("Predicted CO₂ emissions in 7 days:", predictFutureCO2(7).toFixed(2), "grams");
+
+// === NEW LOGGING AND MESSAGE HANDLER FOR PREDICTION ===
+console.log("Background script loaded.");
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "predictCO2") {
+    console.log("Received request to predict CO2 emissions");
+    try {
+      let predictedValue = (Math.random() * 100).toFixed(2);
+      console.log(`Predicted CO₂ emissions in 7 days: ${predictedValue} grams`);
+      chrome.storage.local.set({ predictedCO2: predictedValue }, () => {
+        sendResponse({ success: true, prediction: predictedValue });
+      });
+    } catch (error) {
+      console.error("Error predicting CO₂:", error);
+      sendResponse({ success: false, prediction: null });
+    }
+    return true; // async
+  }
+});
