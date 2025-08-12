@@ -129,6 +129,19 @@ function getDomainFromUrl(url) {
   }
 }
 
+// NEW: return the local date string "YYYY-MM-DD" (local timezone)
+function getLocalDateString(date = new Date()) {
+  const d = date;
+  const pad = (n) => (n < 10 ? '0' + n : n);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// NEW: get GB/hour used for a domain (mirrors the logic used for estimateCO2)
+function getGbPerHourForDomain(domain) {
+  const dynamic = DYNAMIC_GB_RATES[domain];
+  return (dynamic && dynamic.gbPerHour) || DATA_USAGE_PER_HOUR[domain] || DATA_USAGE_PER_HOUR["default"];
+}
+
 function estimateCO2(domain, seconds, userState) {
   const hours = seconds / 3600;
   const dynamic = DYNAMIC_GB_RATES[domain];
@@ -137,6 +150,46 @@ function estimateCO2(domain, seconds, userState) {
   const electricityUsed = gbUsed * ELECTRICITY_PER_GB_KWH;
   const emissionFactor = STATE_EMISSION_FACTOR[userState];
   return electricityUsed * emissionFactor;
+}
+
+// NEW: add a record to dailyHistory and prune to last 28 days
+function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
+  if (!domain) return;
+  const dateStr = getLocalDateString();
+  chrome.storage.local.get(['dailyHistory'], (res) => {
+    const history = Array.isArray(res.dailyHistory) ? res.dailyHistory : [];
+
+    // find today's entry
+    let today = history.find(e => e.date === dateStr);
+    if (!today) {
+      today = {
+        date: dateStr,
+        domains: {},
+        totals: { seconds: 0, gb: 0, co2: 0 }
+      };
+      history.push(today);
+    }
+
+    // ensure domain entry exists and update
+    const domainEntry = today.domains[domain] || { seconds: 0, gb: 0, co2: 0 };
+    domainEntry.seconds = (domainEntry.seconds || 0) + secondsSpent;
+    domainEntry.gb = (domainEntry.gb || 0) + gbUsed;
+    domainEntry.co2 = (domainEntry.co2 || 0) + co2;
+    today.domains[domain] = domainEntry;
+
+    // update totals
+    today.totals.seconds = (today.totals.seconds || 0) + secondsSpent;
+    today.totals.gb = (today.totals.gb || 0) + gbUsed;
+    today.totals.co2 = (today.totals.co2 || 0) + co2;
+
+    // Sort history by date ascending (oldest first), prune to last 28 days
+    history.sort((a, b) => new Date(a.date) - new Date(b.date));
+    while (history.length > 28) {
+      history.shift();
+    }
+
+    chrome.storage.local.set({ dailyHistory: history });
+  });
 }
 
 function saveTime(domain, secondsSpent) {
@@ -149,12 +202,21 @@ function saveTime(domain, secondsSpent) {
 
     if (!userState || !(userState in STATE_EMISSION_FACTOR)) return;
 
+    // compute co2 using existing function (keeps original logic intact)
     const co2 = estimateCO2(domain, secondsSpent, userState);
 
     usageData[domain] = (usageData[domain] || 0) + secondsSpent;
     co2Data[domain] = (co2Data[domain] || 0) + co2;
 
-    chrome.storage.local.set({ usage: usageData, co2: co2Data });
+    // Save the existing usage and co2 as before
+    chrome.storage.local.set({ usage: usageData, co2: co2Data }, () => {
+      // After we saved the main usage/co2 objects, also append to daily history.
+      // Compute gbUsed for the secondsSpent using the same domain -> gbPerHour logic
+      const gbPerHour = getGbPerHourForDomain(domain);
+      const gbUsed = gbPerHour * (secondsSpent / 3600);
+      // add to daily history (this is additive and independent of usage/co2 above)
+      addToDailyHistory(domain, secondsSpent, gbUsed, co2);
+    });
   });
 }
 
