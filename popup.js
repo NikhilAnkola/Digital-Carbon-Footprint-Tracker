@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("Popup script loaded.");
+
   const stateSelect = document.getElementById("stateSelect");
 
   // Load and apply saved state
@@ -28,6 +30,52 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load and render 28-day history
   loadHistory();
+
+  // Prediction feature
+  const predictBtn = document.getElementById("predictBtn");
+  const predictionResult = document.getElementById("predictionResult");
+
+  if (predictBtn) {
+    predictBtn.addEventListener("click", () => {
+      console.log("Predict button clicked");
+      const daysAheadInput = document.getElementById("daysAhead");
+      const daysAhead = daysAheadInput ? parseInt(daysAheadInput.value, 10) || 7 : 7;
+
+      chrome.runtime.sendMessage({ action: "predictCO2", days: daysAhead }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error("Runtime error:", chrome.runtime.lastError.message);
+          predictionResult.textContent = "Error: Could not connect to background script.";
+          return;
+        }
+
+        if (response && typeof response.prediction !== "undefined") {
+          predictionResult.textContent = `Predicted CO₂ emissions in ${daysAhead} days: ${response.prediction} grams`;
+          console.log(`Predicted CO₂ emissions in ${daysAhead} days: ${response.prediction} grams`);
+        } else {
+          predictionResult.textContent = "Prediction failed.";
+        }
+      });
+    });
+  } else {
+    console.error("Predict button not found in popup.html");
+  }
+
+  // Reset button handler
+  const resetBtn = document.getElementById("resetBtn");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      const confirmed = confirm("Are you sure you want to reset all tracking data?");
+      if (confirmed) {
+        chrome.storage.local.set(
+          { usage: {}, co2: {}, userState: "India" },
+          () => {
+            alert("All data reset successfully.");
+            location.reload();
+          }
+        );
+      }
+    });
+  }
 });
 
 // Format time from seconds to "Xh Ym"
@@ -85,7 +133,6 @@ function loadUsageStats() {
   });
 }
 
-// Load 28-day history
 function loadHistory() {
   chrome.storage.local.get(["history"], (res) => {
     const history = res.history || [];
@@ -96,14 +143,12 @@ function loadHistory() {
       return;
     }
 
-    // Apply date filter if inputs are present
     const startInput = document.getElementById("startDateInput");
     const endInput = document.getElementById("endDateInput");
 
     let startDate = startInput && startInput.value ? new Date(startInput.value) : null;
     let endDate = endInput && endInput.value ? new Date(endInput.value) : null;
 
-    // Filter history by date
     let filteredHistory = history.filter(day => {
       const dayDate = new Date(day.date);
       if (startDate && dayDate < startDate) return false;
@@ -114,7 +159,7 @@ function loadHistory() {
     let html = "<table border='1' style='width:100%; border-collapse: collapse;'>";
     html += "<tr><th>Date</th><th>Total Time</th><th>Data Used (GB)</th><th>CO₂</th></tr>";
 
-    history.forEach(day => {
+    filteredHistory.forEach(day => {
       html += `<tr>
         <td>${day.date}</td>
         <td>${formatTime(day.totals.seconds)}</td>
@@ -127,26 +172,3 @@ function loadHistory() {
     historyContainer.innerHTML = html;
   });
 }
-
-document.getElementById("resetBtn").addEventListener("click", () => {
-  const confirmed = confirm("Are you sure you want to reset all tracking data?");
-  if (confirmed) {
-    chrome.storage.local.set(
-      { usage: {}, co2: {}, userState: "India" }, // Reset usage, co2, and state
-      () => {
-        alert("All data reset successfully.");
-        location.reload(); // Refresh popup UI
-      }
-    );
-  }
-});
-
-// Predict future CO₂
-document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById("predictBtn").addEventListener("click", function () {
-    const daysAhead = 7; // or from input
-    chrome.runtime.sendMessage({ action: "predictFutureCO2", days: daysAhead }, function (response) {
-      console.log(`Predicted CO₂ emissions in ${daysAhead} days: ${response.prediction} grams`);
-    });
-  });
-});
