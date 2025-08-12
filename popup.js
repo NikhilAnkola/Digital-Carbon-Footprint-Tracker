@@ -38,8 +38,13 @@ document.addEventListener("DOMContentLoaded", () => {
   if (predictBtn) {
     predictBtn.addEventListener("click", () => {
       console.log("Predict button clicked");
-      const daysAheadInput = document.getElementById("daysAhead");
-      const daysAhead = daysAheadInput ? parseInt(daysAheadInput.value, 10) || 7 : 7;
+      let daysAhead = parseInt(document.getElementById("daysAhead").value, 10);
+
+      // Validation: Only allow numbers between 1 and 7
+      if (isNaN(daysAhead) || daysAhead < 1 || daysAhead > 7) {
+        predictionResult.textContent = "Please enter a number between 1 and 7.";
+        return;
+      }
 
       chrome.runtime.sendMessage({ action: "predictCO2", days: daysAhead }, (response) => {
         if (chrome.runtime.lastError) {
