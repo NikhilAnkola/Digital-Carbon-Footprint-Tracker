@@ -25,11 +25,27 @@ function formatTime(seconds) {
   return `${hrs}h ${mins % 60}m`;
 }
 
+// Convert grams CO2 to kg + g if needed
+function formatCO2(co2g) {
+  if (co2g >= 1000) {
+    const kg = Math.floor(co2g / 1000);
+    const g = Math.round(co2g % 1000);
+    return `${kg} kg ${g} g`;
+  }
+  return `${co2g.toFixed(1)} g`;
+}
+
 // Convert grams CO2 to real-world equivalent
 function getEquivalent(co2g) {
   const kmDriven = (co2g / 120).toFixed(2); // 120 g/km
   const phoneCharges = Math.floor(co2g / 5); // 5g per charge
-  return `${kmDriven} km driven or ${phoneCharges}% phone charged`;
+
+  const co2Formatted =
+    co2g >= 1000
+      ? `${Math.floor(co2g / 1000)} kg ${Math.round(co2g % 1000)} g`
+      : `${co2g.toFixed(1)} g`;
+
+  return `${co2Formatted} = ${kmDriven} km driven or ${phoneCharges}% phone charged`;
 }
 
 function loadUsageStats() {
@@ -57,13 +73,15 @@ function loadUsageStats() {
   });
 }
 
-// Currently only resets the usage and co2 data, doesn't reset the userState
 document.getElementById("resetBtn").addEventListener("click", () => {
   const confirmed = confirm("Are you sure you want to reset all tracking data?");
   if (confirmed) {
-    chrome.storage.local.remove(["usage", "co2"], () => {
-      alert("All data reset successfully.");
-      location.reload(); // Refresh popup UI
-    });
+    chrome.storage.local.set(
+      { usage: {}, co2: {}, userState: "India" }, // Reset usage, co2, and state
+      () => {
+        alert("All data reset successfully.");
+        location.reload(); // Refresh popup UI
+      }
+    );
   }
 });
