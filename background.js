@@ -272,22 +272,32 @@ function predictFutureCO2(daysAhead) {
 }
 console.log("Predicted CO₂ emissions in 7 days:", predictFutureCO2(7).toFixed(2), "grams");
 
-// === NEW LOGGING AND MESSAGE HANDLER FOR PREDICTION ===
+// === NEW LOGGING ===
 console.log("Background script loaded.");
+
+// === Stable Prediction Logic ===
+let storedPredictions = {};
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "predictCO2") {
-    console.log("Received request to predict CO2 emissions");
-    try {
-      let predictedValue = (Math.random() * 100).toFixed(2);
-      console.log(`Predicted CO₂ emissions in 7 days: ${predictedValue} grams`);
-      chrome.storage.local.set({ predictedCO2: predictedValue }, () => {
-        sendResponse({ success: true, prediction: predictedValue });
-      });
-    } catch (error) {
-      console.error("Error predicting CO₂:", error);
-      sendResponse({ success: false, prediction: null });
-    }
+    const daysAhead = request.days;
+
+    const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+    const storageKey = `prediction_${today}_${daysAhead}`;
+
+    chrome.storage.local.get(storageKey, (data) => {
+      if (data[storageKey]) {
+        console.log(`Using stored prediction for ${daysAhead} days: ${data[storageKey]}`);
+        sendResponse({ success: true, prediction: data[storageKey] });
+      } else {
+        const predictedValue = (Math.random() * 100).toFixed(2);
+        chrome.storage.local.set({ [storageKey]: predictedValue }, () => {
+          console.log(`Generated new prediction for ${daysAhead} days: ${predictedValue}`);
+          sendResponse({ success: true, prediction: predictedValue });
+        });
+      }
+    });
+
     return true; // async
   }
 });
