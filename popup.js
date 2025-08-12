@@ -16,6 +16,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load and render CO2 + usage stats
   loadUsageStats();
+
+  // Load and render 28-day history
+  loadHistory();
 });
 
 // Format time from seconds to "Xh Ym"
@@ -32,7 +35,7 @@ function formatCO2(co2g) {
     const g = Math.round(co2g % 1000);
     return `${kg} kg ${g} g`;
   }
-  return `${co2g.toFixed(1)} g`;
+  return `${co2g.toFixed(2)} g`;
 }
 
 // Convert grams CO2 to real-world equivalent
@@ -43,7 +46,7 @@ function getEquivalent(co2g) {
   const co2Formatted =
     co2g >= 1000
       ? `${Math.floor(co2g / 1000)} kg ${Math.round(co2g % 1000)} g`
-      : `${co2g.toFixed(1)} g`;
+      : `${co2g.toFixed(2)} g`;
 
   return `${co2Formatted} = ${kmDriven} km driven or ${phoneCharges}% phone charged`;
 }
@@ -63,13 +66,41 @@ function loadUsageStats() {
       const time = usage[domain];
       const grams = co2[domain] || 0;
       totalCO2 += grams;
-      html += `<li><b>${domain}</b>: ${formatTime(time)} → ${grams.toFixed(1)} g CO₂</li>`;
+      html += `<li><b>${domain}</b>: ${formatTime(time)} → ${grams.toFixed(2)} g CO₂</li>`;
     }
 
     html += "</ul>";
     container.innerHTML = html;
-    totalSpan.textContent = totalCO2.toFixed(1);
+    totalSpan.textContent = totalCO2.toFixed(2);
     equivSpan.textContent = getEquivalent(totalCO2);
+  });
+}
+
+// Load 28-day history
+function loadHistory() {
+  chrome.storage.local.get(["history"], (res) => {
+    const history = res.history || [];
+    const historyContainer = document.getElementById("historyContainer");
+
+    if (history.length === 0) {
+      historyContainer.innerHTML = "<p>No historical data available.</p>";
+      return;
+    }
+
+    let html = "<table border='1' style='width:100%; border-collapse: collapse;'>";
+    html += "<tr><th>Date</th><th>Total Time</th><th>Data Used (GB)</th><th>CO₂</th></tr>";
+
+    history.forEach(day => {
+      html += `<tr>
+        <td>${day.date}</td>
+        <td>${formatTime(day.totals.seconds)}</td>
+        <td>${day.totals.gb.toFixed(2)}</td>
+        <td>${formatCO2(day.totals.co2)}</td>
+      </tr>`;
+    });
+
+    html += "</table>";
+    historyContainer.innerHTML = html;
   });
 }
 
