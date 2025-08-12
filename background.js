@@ -61,7 +61,8 @@ const RESOLUTION_GB_MAP = {
   720: 1.5,    // 720p
   480: 0.7,
   360: 0.25,
-  240: 0.15
+  240: 0.15,
+  144: 0.1
 };
 
 // fallback per-category default gb/hour
