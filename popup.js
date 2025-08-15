@@ -3,6 +3,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const stateSelect = document.getElementById("stateSelect");
 
+  // --- Auto-clear daily data if a new day started ---
+  const todayStr = new Date().toISOString().split("T")[0];
+  chrome.storage.local.get(["lastPopupDate"], (res) => {
+    if (res.lastPopupDate !== todayStr) {
+      // New day → clear usage & co2, keep history & state
+      chrome.storage.local.set(
+        { usage: {}, co2: {}, lastPopupDate: todayStr },
+        () => {
+          console.log("New day detected — cleared daily usage & CO₂.");
+          // Reload after clearing so fresh UI appears
+          location.reload();
+        }
+      );
+    }
+  });
+
   // Load and apply saved state
   chrome.storage.local.get(["userState"], (res) => {
     if (res.userState) {
@@ -21,15 +37,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const endInput = document.getElementById("endDateInput");
 
   if (startInput && endInput) {
-    startInput.addEventListener("change", loadHistory);
-    endInput.addEventListener("change", loadHistory);
+    startInput.addEventListener("change", loadDailyHistory);
+    endInput.addEventListener("change", loadDailyHistory);
   }
 
   // Load and render CO2 + usage stats
   loadUsageStats();
 
-  // Load and render 28-day history
-  loadHistory();
+  // Load and render 28-day daily history
+  loadDailyHistory();
 
   // Prediction feature
   const predictBtn = document.getElementById("predictBtn");
@@ -138,9 +154,19 @@ function loadUsageStats() {
   });
 }
 
-function loadHistory() {
-  chrome.storage.local.get(["history"], (res) => {
-    const history = res.history || [];
+function loadDailyHistory() {
+  chrome.storage.local.get(["dailyHistory"], (res) => {
+    let history = res.dailyHistory || [];
+
+    // Sort by date (newest first)
+    history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Keep only last 28 days
+    history = history.slice(0, 28);
+
+    // Save trimmed history back so storage doesn't grow endlessly
+    chrome.storage.local.set({ dailyHistory: history });
+
     const historyContainer = document.getElementById("historyContainer");
 
     if (history.length === 0) {
