@@ -139,6 +139,41 @@ function estimateCO2(domain, seconds, userState) {
   return electricityUsed * emissionFactor;
 }
 
+// === New: Rule-Based Suggestions Using dailyHistory ===
+function checkDailyHistorySuggestions() {
+  chrome.storage.local.get(['dailyHistory'], (res) => {
+    const history = res.dailyHistory || [];
+    if (!history.length) return;
+    const today = history[history.length - 1];
+    if (!today?.totals) return;
+
+    // Rule 1: Total CO₂ > 100g
+    if (today.totals.co2 > 100) {
+      chrome.notifications.create({
+        type: "basic",
+        iconUrl: "icons/icon128.png",
+        title: "High CO₂ Usage",
+        message: "Your CO₂ usage is high today. Try taking a short break from streaming."
+      });
+    }
+
+    // Rule 2: Streaming > 2h at 1080p+
+    const streamingDomain = Object.keys(today.domains).find(d => getCategoryFromDomain(d) === 'streaming');
+    if (streamingDomain) {
+      const streamData = today.domains[streamingDomain];
+      const hours = streamData.seconds / 3600;
+      if (hours > 2) {
+        chrome.notifications.create({
+          type: "basic",
+          iconUrl: "icons/icon128.png",
+          title: "Streaming Suggestion",
+          message: "You've streamed over 2 hours. Consider lowering resolution to save CO₂."
+        });
+      }
+    }
+  });
+}
+
 function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
   if (!domain) return;
   const dateStr = getLocalDateString();
@@ -157,10 +192,29 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
     today.totals.seconds += secondsSpent;
     today.totals.gb += gbUsed;
     today.totals.co2 += co2;
+
     history.sort((a, b) => new Date(a.date) - new Date(b.date));
     while (history.length > 28) history.shift();
-    chrome.storage.local.set({ dailyHistory: history });
+
+    chrome.storage.local.set({ dailyHistory: history }, () => {
+      checkDailyHistorySuggestions(); // ✅ Check rules after updating history
+    });
   });
+}
+
+// === Rule-Based AI Suggestions ===
+function checkRuleBasedSuggestions(domain, secondsSpent) {
+  if (!domain) return;
+
+  const hoursSpent = secondsSpent / 3600;
+  if (domain.includes("youtube") && hoursSpent > 2) {
+    chrome.notifications.create({
+      type: "basic",
+      iconUrl: "icons/icon128.png",
+      title: "Suggestion",
+      message: "You've been watching YouTube for over 2 hours at high resolution. Consider lowering video quality to save CO₂."
+    });
+  }
 }
 
 function saveTime(domain, secondsSpent) {
@@ -177,9 +231,25 @@ function saveTime(domain, secondsSpent) {
       const gbPerHour = getGbPerHourForDomain(domain);
       const gbUsed = gbPerHour * (secondsSpent / 3600);
       addToDailyHistory(domain, secondsSpent, gbUsed, co2);
+      checkRuleBasedSuggestions(domain, usageData[domain]);
     });
   });
 }
+
+// === New Day Auto-Reset ===
+function checkAndResetForNewDay() {
+  const today = getLocalDateString();
+  chrome.storage.local.get(["lastOpenedDate"], (res) => {
+    if (res.lastOpenedDate !== today) {
+      chrome.storage.local.set({
+        usage: {},
+        co2: {},
+        lastOpenedDate: today
+      });
+    }
+  });
+}
+setInterval(checkAndResetForNewDay, 60 * 1000);
 
 // === Event Listeners ===
 
@@ -265,39 +335,40 @@ chrome.runtime.onSuspend.addListener(() => {
   }
 });
 
-// ====== ML Model Parameters ======
-const CO2_MODEL = { m: 2.3456, b: 50.1234 };
-function predictFutureCO2(daysAhead) {
-  return CO2_MODEL.m * daysAhead + CO2_MODEL.b;
-}
-console.log("Predicted CO₂ emissions in 7 days:", predictFutureCO2(7).toFixed(2), "grams");
-
-// === NEW LOGGING ===
-console.log("Background script loaded.");
-
-// === Stable Prediction Logic ===
-let storedPredictions = {};
-
+// ====== Stable Prediction Logic Using Real dailyHistory ======
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "predictCO2") {
     const daysAhead = request.days;
+    if (daysAhead < 1 || daysAhead > 7) {
+      sendResponse({ success: false, prediction: "Please enter a number between 1 and 7." });
+      return;
+    }
 
-    const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+    const today = new Date().toISOString().split("T")[0];
     const storageKey = `prediction_${today}_${daysAhead}`;
 
-    chrome.storage.local.get(storageKey, (data) => {
+    chrome.storage.local.get(["dailyHistory", storageKey], (data) => {
       if (data[storageKey]) {
-        console.log(`Using stored prediction for ${daysAhead} days: ${data[storageKey]}`);
         sendResponse({ success: true, prediction: data[storageKey] });
-      } else {
-        const predictedValue = (Math.random() * 100).toFixed(2);
-        chrome.storage.local.set({ [storageKey]: predictedValue }, () => {
-          console.log(`Generated new prediction for ${daysAhead} days: ${predictedValue}`);
-          sendResponse({ success: true, prediction: predictedValue });
-        });
+        return;
       }
+
+      const dailyHistory = data.dailyHistory || [];
+      if (dailyHistory.length < 2) {
+        sendResponse({ success: false, prediction: "Not enough data" });
+        return;
+      }
+
+      const avgDailyCO2 = dailyHistory.reduce((sum, day) => sum + (day.totals?.co2 || 0), 0) / dailyHistory.length;
+      const predictedValue = (avgDailyCO2 * daysAhead).toFixed(2);
+
+      chrome.storage.local.set({ [storageKey]: predictedValue }, () => {
+        sendResponse({ success: true, prediction: predictedValue });
+      });
     });
 
-    return true; // async
+    return true;
   }
 });
+
+console.log("Background script loaded.");
