@@ -1,3 +1,11 @@
+// === Load rule engine (MV3 service worker classic script) ===
+try {
+  importScripts("rule_suggestions.js");
+  console.log("[BG] rule_suggestions.js loaded");
+} catch (e) {
+  console.warn("[BG] Failed to load rule_suggestions.js", e);
+}
+
 // === Configuration Tables ===
 
 const DATA_USAGE_PER_HOUR = {
@@ -139,7 +147,35 @@ function estimateCO2(domain, seconds, userState) {
   return electricityUsed * emissionFactor;
 }
 
-// === Daily History Update + Rule Trigger ===
+// === Notifications: dedupe per day ===
+function sendRuleNotifications(notifications) {
+  if (!Array.isArray(notifications) || !notifications.length) return;
+  const today = getLocalDateString();
+  chrome.storage.local.get(["_ruleNotiSeen"], (res) => {
+    const seenMap = res._ruleNotiSeen || {};
+    const seenToday = new Set(seenMap[today] || []);
+    notifications.forEach((n) => {
+      const key = n.id || `${n.title}|${n.message}`;
+      if (seenToday.has(key)) return; // already shown today
+      chrome.notifications.create(key, {
+        type: "basic",
+        iconUrl: "icons/icon128.png",
+        title: n.title,
+        message: n.message
+      });
+      seenToday.add(key);
+    });
+    seenMap[today] = Array.from(seenToday);
+    chrome.storage.local.set({ _ruleNotiSeen: seenMap });
+  });
+}
+
+// === Auto-open dashboard tab when clicking the extension icon ===
+chrome.action.onClicked.addListener(() => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+});
+
+// === History update ===
 function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
   if (!domain) return;
   const dateStr = getLocalDateString();
@@ -159,19 +195,21 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
     today.totals.gb += gbUsed;
     today.totals.co2 += co2;
 
+    // Sort and trim to last 28 days (ascending by date)
     history.sort((a, b) => new Date(a.date) - new Date(b.date));
     while (history.length > 28) history.shift();
 
     chrome.storage.local.set({ dailyHistory: history }, () => {
-      // ✅ Instead of local rules, delegate to rule_suggestions.js
-      if (typeof checkAndAlertSuggestions === "function") {
-        checkAndAlertSuggestions(today);
+      // ✅ After history is updated, evaluate rules and push notifications (via rule_suggestions.js)
+      if (typeof self.getNotificationsFromHistory === "function") {
+        const notifications = self.getNotificationsFromHistory(history);
+        sendRuleNotifications(notifications);
       }
     });
   });
 }
 
-// === Rule-Based AI Suggestions (legacy single-domain check) ===
+// === (Legacy) Per-domain quick rule (kept for compatibility; uses notifications) ===
 function checkRuleBasedSuggestions(domain, secondsSpent) {
   if (!domain) return;
   const hoursSpent = secondsSpent / 3600;
@@ -180,7 +218,7 @@ function checkRuleBasedSuggestions(domain, secondsSpent) {
       type: "basic",
       iconUrl: "icons/icon128.png",
       title: "Suggestion",
-      message: "You've been watching YouTube for over 2 hours at high resolution. Consider lowering video quality to save CO₂."
+      message: "You've been watching YouTube for over 2 hours. Consider lowering video quality to save CO₂."
     });
   }
 }
@@ -199,7 +237,7 @@ function saveTime(domain, secondsSpent) {
       const gbPerHour = getGbPerHourForDomain(domain);
       const gbUsed = gbPerHour * (secondsSpent / 3600);
       addToDailyHistory(domain, secondsSpent, gbUsed, co2);
-      checkRuleBasedSuggestions(domain, usageData[domain]);
+      checkRuleBasedSuggestions(domain, usageData[domain]); // keeps old behavior too
     });
   });
 }
@@ -212,7 +250,8 @@ function checkAndResetForNewDay() {
       chrome.storage.local.set({
         usage: {},
         co2: {},
-        lastOpenedDate: today
+        lastOpenedDate: today,
+        _ruleNotiSeen: {} // reset dedupe map across days
       });
     }
   });
@@ -247,7 +286,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Tab switch
 chrome.tabs.onActivated.addListener(function (info) {
   chrome.tabs.get(info.tabId, function (tab) {
-    if (!tab.url) return;
+    if (!tab || !tab.url) return;
     const domain = getDomainFromUrl(tab.url);
     const now = Date.now();
     if (currentDomain && startTimestamp) {
@@ -262,7 +301,7 @@ chrome.tabs.onActivated.addListener(function (info) {
 
 // URL change
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-  if (tab.active && changeInfo.url) {
+  if (tab && tab.active && changeInfo.url) {
     const domain = getDomainFromUrl(changeInfo.url);
     const now = Date.now();
     if (currentDomain && startTimestamp) {
