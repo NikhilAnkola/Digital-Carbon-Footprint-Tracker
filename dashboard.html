@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <title>Digital Carbon Footprint – Dashboard</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="dashboard.css">
 <style>
     :root { color-scheme: light dark; }
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
@@ -16,6 +17,11 @@
     th, td { text-align: left; padding: 8px; border-bottom: 1px solid rgba(127,127,127,.25); }
     .muted { opacity: .7; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .btn { padding: 6px 12px; margin: 2px; border-radius: 6px; border: 1px solid rgba(127,127,127,.4); background: ButtonFace; cursor: pointer; }
+    .btn:hover { background: rgba(127,127,127,.15); }
+    .chart-wrap { margin-top: 12px; }
+    .header-row { display: flex; justify-content: space-between; align-items: center; }
+    .empty.hidden { display: none; }
 </style>
 </head>
 <body>
@@ -55,6 +61,15 @@
 
     <hr>
 
+    <!-- === Today's Usage: CO₂ by Site (Pie) === -->
+    <section class="card">
+    <h2>Today's Usage — CO₂ by Site</h2>
+    <div class="chart-wrap">
+        <canvas id="todayPieChart" width="400" height="400" aria-label="Today CO2 share by site"></canvas>
+        <div id="todayPieEmpty" class="empty hidden">No data for today yet.</div>
+    </div>
+    </section>
+
     <!-- Today's Usage Summary -->
     <h3>Today's Usage Summary</h3>
     <div id="usageContainer"><p>Loading...</p></div>
@@ -73,16 +88,38 @@
 
     <hr />
 
+    <!-- === Last 28 Days: CO₂ per Day (Bar, 7 at a time) === -->
+    <section class="card">
+    <div class="header-row">
+        <h2>Last 28 Days — CO₂ per Day</h2>
+        <div class="pager">
+        <button id="prev7" type="button" class="btn">Prev 7</button>
+        <button id="next7" type="button" class="btn">Next 7</button>
+        </div>
+    </div>
+    <div class="chart-wrap">
+        <canvas id="historyBarChart" width="700" height="360" aria-label="Last 28 days CO2 bar chart"></canvas>
+        <div id="historyBarEmpty" class="empty hidden">No history yet.</div>
+    </div>
+    </section>
+
     <!-- Last 28 Days History -->
     <h3>Last 28 Days History</h3>
     <div id="historyContainer"><p>Loading history...</p></div>
 
     <hr />
 
-    <!-- Reset Button -->
-    <button id="resetBtn">Reset All Data</button>
+    <!-- Buttons -->
+    <button id="resetBtn" class="btn">Reset All Data</button>
+    <button id="refreshChartsBtn" class="btn">Refresh Charts</button>
 
     <script src="rule_suggestions.js"></script>
     <script src="popup.js" defer></script>
+
+    <!-- Load Chart.js from local file -->
+    <script src="libs/chart.umd.js"></script>
+    
+    <!-- Dashboard chart logic -->
+    <script src="dashboard-charts.js"></script>
 </body>
 </html>
