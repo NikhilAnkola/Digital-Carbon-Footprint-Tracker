@@ -47,7 +47,7 @@
       }
     }
     const streamingHours = streamingSeconds / 3600;
-    if (streamingHours > 0.01) {
+    if (streamingHours > 2) {
       notifications.push({
         id: "streaming_over_2h",
         title: "Streaming Tip",
