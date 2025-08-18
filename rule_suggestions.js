@@ -25,12 +25,11 @@
     if (!Array.isArray(dailyHistory) || dailyHistory.length === 0) return notifications;
 
     const todayStr = getLocalDateString();
-    // Prefer exact date match, else fall back to last element
     const todayData = dailyHistory.find(d => d.date === todayStr) || dailyHistory[dailyHistory.length - 1] || {};
     const totals = todayData.totals || {};
     const domains = todayData.domains || {};
 
-    // Rule 1: Total CO₂ > 100g (tweak threshold if you want it more/less aggressive)
+    // Rule 1: Total CO₂ > 100g
     if (typeof totals.co2 === "number" && totals.co2 > 100) {
       notifications.push({
         id: "high_co2_total",
@@ -39,7 +38,7 @@
       });
     }
 
-    // Rule 2: Streaming > 2 hours across streaming platforms
+    // Rule 2: Streaming > 2h across platforms
     let streamingSeconds = 0;
     for (const [domain, stats] of Object.entries(domains)) {
       const isStreaming = STREAMING_SITES.some(s => domain.includes(s));
@@ -56,14 +55,11 @@
       });
     }
 
-    // Add more rules here and return an array of notifications
     return notifications;
   }
 
-  // Expose to background service worker
   self.getNotificationsFromHistory = getNotificationsFromHistory;
 
-  // Optional CommonJS export (not used by Chrome, but harmless)
   if (typeof module !== "undefined" && module.exports) {
     module.exports = { getNotificationsFromHistory };
   }
