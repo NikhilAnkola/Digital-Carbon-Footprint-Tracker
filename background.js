@@ -170,7 +170,7 @@ function sendRuleNotifications(notifications) {
   });
 }
 
-// === Auto-open dashboard tab when clicking the extension icon ===
+// === Open dashboard tab when clicking the extension icon ===
 chrome.action.onClicked.addListener(() => {
   chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 });
@@ -195,12 +195,11 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
     today.totals.gb += gbUsed;
     today.totals.co2 += co2;
 
-    // Sort and trim to last 28 days (ascending by date)
+    // Sort and trim to last 28 days
     history.sort((a, b) => new Date(a.date) - new Date(b.date));
     while (history.length > 28) history.shift();
 
     chrome.storage.local.set({ dailyHistory: history }, () => {
-      // ✅ After history is updated, evaluate rules and push notifications (via rule_suggestions.js)
       if (typeof self.getNotificationsFromHistory === "function") {
         const notifications = self.getNotificationsFromHistory(history);
         sendRuleNotifications(notifications);
@@ -209,7 +208,7 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
   });
 }
 
-// === (Legacy) Per-domain quick rule (kept for compatibility; uses notifications) ===
+// === (Legacy) Per-domain quick rule (kept) ===
 function checkRuleBasedSuggestions(domain, secondsSpent) {
   if (!domain) return;
   const hoursSpent = secondsSpent / 3600;
@@ -237,12 +236,12 @@ function saveTime(domain, secondsSpent) {
       const gbPerHour = getGbPerHourForDomain(domain);
       const gbUsed = gbPerHour * (secondsSpent / 3600);
       addToDailyHistory(domain, secondsSpent, gbUsed, co2);
-      checkRuleBasedSuggestions(domain, usageData[domain]); // keeps old behavior too
+      checkRuleBasedSuggestions(domain, usageData[domain]);
     });
   });
 }
 
-// === New Day Auto-Reset ===
+// === New Day Auto-Reset (kept) ===
 function checkAndResetForNewDay() {
   const today = getLocalDateString();
   chrome.storage.local.get(["lastOpenedDate"], (res) => {
@@ -257,6 +256,32 @@ function checkAndResetForNewDay() {
   });
 }
 setInterval(checkAndResetForNewDay, 60 * 1000);
+
+// === Precise midnight reset using chrome.alarms ===
+function scheduleMidnightAlarm() {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 5, 0); // 5s after midnight to avoid race
+  const when = midnight.getTime();
+  chrome.alarms.create("midnightReset", { when });
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "midnightReset") {
+    checkAndResetForNewDay();
+    scheduleMidnightAlarm(); // schedule next day
+  }
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  scheduleMidnightAlarm();
+  checkAndResetForNewDay();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  scheduleMidnightAlarm();
+  checkAndResetForNewDay();
+});
 
 // === Event Listeners ===
 
