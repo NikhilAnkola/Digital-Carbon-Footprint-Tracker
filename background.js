@@ -139,41 +139,7 @@ function estimateCO2(domain, seconds, userState) {
   return electricityUsed * emissionFactor;
 }
 
-// === New: Rule-Based Suggestions Using dailyHistory ===
-function checkDailyHistorySuggestions() {
-  chrome.storage.local.get(['dailyHistory'], (res) => {
-    const history = res.dailyHistory || [];
-    if (!history.length) return;
-    const today = history[history.length - 1];
-    if (!today?.totals) return;
-
-    // Rule 1: Total CO₂ > 100g
-    if (today.totals.co2 > 100) {
-      chrome.notifications.create({
-        type: "basic",
-        iconUrl: "icons/icon128.png",
-        title: "High CO₂ Usage",
-        message: "Your CO₂ usage is high today. Try taking a short break from streaming."
-      });
-    }
-
-    // Rule 2: Streaming > 2h at 1080p+
-    const streamingDomain = Object.keys(today.domains).find(d => getCategoryFromDomain(d) === 'streaming');
-    if (streamingDomain) {
-      const streamData = today.domains[streamingDomain];
-      const hours = streamData.seconds / 3600;
-      if (hours > 2) {
-        chrome.notifications.create({
-          type: "basic",
-          iconUrl: "icons/icon128.png",
-          title: "Streaming Suggestion",
-          message: "You've streamed over 2 hours. Consider lowering resolution to save CO₂."
-        });
-      }
-    }
-  });
-}
-
+// === Daily History Update + Rule Trigger ===
 function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
   if (!domain) return;
   const dateStr = getLocalDateString();
@@ -197,15 +163,17 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
     while (history.length > 28) history.shift();
 
     chrome.storage.local.set({ dailyHistory: history }, () => {
-      checkDailyHistorySuggestions(); // ✅ Check rules after updating history
+      // ✅ Instead of local rules, delegate to rule_suggestions.js
+      if (typeof checkAndAlertSuggestions === "function") {
+        checkAndAlertSuggestions(today);
+      }
     });
   });
 }
 
-// === Rule-Based AI Suggestions ===
+// === Rule-Based AI Suggestions (legacy single-domain check) ===
 function checkRuleBasedSuggestions(domain, secondsSpent) {
   if (!domain) return;
-
   const hoursSpent = secondsSpent / 3600;
   if (domain.includes("youtube") && hoursSpent > 2) {
     chrome.notifications.create({
