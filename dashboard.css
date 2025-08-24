@@ -12,9 +12,7 @@
   font-size: 0.95rem;
 }
 
-.hidden { 
-  display: none; 
-}
+.hidden { display: none; }
 
 .header-row {
   display: flex;
@@ -44,63 +42,4 @@
   padding: 14px 16px;
   margin: 14px 0;
   box-shadow: 0 1px 10px rgba(0,0,0,0.04);
-}
-
-/* === GAMIFICATION STYLES === */
-
-/* Gamification container card */
-.gamification-card {
-  margin-top: 16px;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #eee;
-  background: #fafafa;
-}
-
-/* Progress bar */
-.progress-wrap {
-  height: 12px;
-  background: #eee;
-  border-radius: 6px;
-  overflow: hidden;
-  margin: 8px 0 16px;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #4caf50, #81c784);
-  transition: width 0.4s ease;
-  width: 0%;
-}
-
-/* Badges */
-.badge-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.badge {
-  flex: 0 0 auto;
-  min-width: 70px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #ddd;
-  text-align: center;
-  font-size: 0.85rem;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-  transition: transform 0.2s ease;
-}
-
-.badge:hover {
-  transform: scale(1.05);
-}
-
-/* Streak display */
-.streak {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-top: 12px;
-  text-align: center;
 }
