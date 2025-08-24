@@ -1,5 +1,3 @@
-import { updateGamification } from "./gamification.js";
-
 // === Load rule engine (MV3 service worker classic script) ===
 try {
   importScripts("rule_suggestions.js");
@@ -27,7 +25,6 @@ const DATA_USAGE_PER_HOUR = {
 
 const ELECTRICITY_PER_GB_KWH = 0.12;
 
-// === State emission factors (kept names as-is) ===
 const STATE_EMISSION_FACTOR = {
   "Andhra Pradesh": 654,
   "Arunachal Pradesh": 24,
@@ -59,7 +56,7 @@ const STATE_EMISSION_FACTOR = {
   "West Bengal": 782
 };
 
-// === Dynamic Streaming Data ===
+// === New Dynamic Streaming Data ===
 
 const DYNAMIC_GB_RATES = {};
 
@@ -115,11 +112,13 @@ function calcGbPerHourFromStats({ resolution, downlink, avgReqMB, domain }) {
 }
 
 // === Runtime Variables ===
+
 let currentTabId = null;
 let currentDomain = null;
 let startTimestamp = Date.now();
 
 // === Helpers ===
+
 function getDomainFromUrl(url) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -148,7 +147,7 @@ function estimateCO2(domain, seconds, userState) {
   return electricityUsed * emissionFactor;
 }
 
-// === Notifications (dedupe per day) ===
+// === Notifications: dedupe per day ===
 function sendRuleNotifications(notifications) {
   if (!Array.isArray(notifications) || !notifications.length) return;
   const today = getLocalDateString();
@@ -157,22 +156,12 @@ function sendRuleNotifications(notifications) {
     const seenToday = new Set(seenMap[today] || []);
     notifications.forEach((n) => {
       const key = n.id || `${n.title}|${n.message}`;
-      if (seenToday.has(key)) {
-        console.log(`[NOTI] Skipping already shown notification today: ${key}`);
-        return;
-      }
-      console.log(`[NOTI] Creating notification: ${key}`);
+      if (seenToday.has(key)) return; // already shown today
       chrome.notifications.create(key, {
         type: "basic",
         iconUrl: "icons/icon128.png",
         title: n.title,
         message: n.message
-      }, (id) => {
-        if (chrome.runtime.lastError) {
-          console.error("[NOTI] Failed to create notification", chrome.runtime.lastError);
-        } else {
-          console.log(`[NOTI] Notification created with id=${id}`);
-        }
       });
       seenToday.add(key);
     });
@@ -181,9 +170,8 @@ function sendRuleNotifications(notifications) {
   });
 }
 
-// === Open dashboard tab on extension icon click ===
+// === Open dashboard tab when clicking the extension icon ===
 chrome.action.onClicked.addListener(() => {
-  console.log("[BG] Dashboard icon clicked → opening dashboard.html");
   chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 });
 
@@ -191,14 +179,12 @@ chrome.action.onClicked.addListener(() => {
 function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
   if (!domain) return;
   const dateStr = getLocalDateString();
-  console.log(`[HISTORY] Updating ${dateStr} with domain=${domain}, sec=${secondsSpent}, gb=${gbUsed.toFixed(3)}, co2=${co2.toFixed(2)}`);
   chrome.storage.local.get(['dailyHistory'], (res) => {
     const history = Array.isArray(res.dailyHistory) ? res.dailyHistory : [];
     let today = history.find(e => e.date === dateStr);
     if (!today) {
       today = { date: dateStr, domains: {}, totals: { seconds: 0, gb: 0, co2: 0 } };
       history.push(today);
-      console.log(`[HISTORY] Created new entry for today ${dateStr}`);
     }
     const domainEntry = today.domains[domain] || { seconds: 0, gb: 0, co2: 0 };
     domainEntry.seconds += secondsSpent;
@@ -209,30 +195,24 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
     today.totals.gb += gbUsed;
     today.totals.co2 += co2;
 
-    // === Gamification update ===
-    const todayKey = new Date().toISOString().slice(0, 10);
-    updateGamification(today.totals.co2, todayKey);
-
+    // Sort and trim to last 28 days
     history.sort((a, b) => new Date(a.date) - new Date(b.date));
     while (history.length > 28) history.shift();
 
     chrome.storage.local.set({ dailyHistory: history }, () => {
-      console.log("[HISTORY] Saved updated dailyHistory");
       if (typeof self.getNotificationsFromHistory === "function") {
         const notifications = self.getNotificationsFromHistory(history);
-        console.log(`[HISTORY] Notifications generated: ${notifications.length}`);
         sendRuleNotifications(notifications);
       }
     });
   });
 }
 
-// === Legacy rule-based suggestion (kept) ===
+// === (Legacy) Per-domain quick rule (kept) ===
 function checkRuleBasedSuggestions(domain, secondsSpent) {
   if (!domain) return;
   const hoursSpent = secondsSpent / 3600;
   if (domain.includes("youtube") && hoursSpent > 2) {
-    console.log("[RULE] Triggered YouTube >2h rule → showing suggestion notification");
     chrome.notifications.create({
       type: "basic",
       iconUrl: "icons/icon128.png",
@@ -248,15 +228,11 @@ function saveTime(domain, secondsSpent) {
     const usageData = result.usage || {};
     const co2Data = result.co2 || {};
     const userState = result.userState;
-    if (!userState || !(userState in STATE_EMISSION_FACTOR)) {
-      console.warn("[SAVE] Missing or invalid userState, skipping CO₂ calculation");
-      return;
-    }
+    if (!userState || !(userState in STATE_EMISSION_FACTOR)) return;
     const co2 = estimateCO2(domain, secondsSpent, userState);
     usageData[domain] = (usageData[domain] || 0) + secondsSpent;
     co2Data[domain] = (co2Data[domain] || 0) + co2;
     chrome.storage.local.set({ usage: usageData, co2: co2Data }, () => {
-      console.log(`[SAVE] Saved usage for ${domain}: sec=${secondsSpent}, co2=${co2.toFixed(2)}`);
       const gbPerHour = getGbPerHourForDomain(domain);
       const gbUsed = gbPerHour * (secondsSpent / 3600);
       addToDailyHistory(domain, secondsSpent, gbUsed, co2);
@@ -265,54 +241,50 @@ function saveTime(domain, secondsSpent) {
   });
 }
 
-// === New Day Auto-Reset ===
+// === New Day Auto-Reset (kept) ===
 function checkAndResetForNewDay() {
   const today = getLocalDateString();
   chrome.storage.local.get(["lastOpenedDate"], (res) => {
     if (res.lastOpenedDate !== today) {
-      console.log("[RESET] New day detected → resetting usage & co2 data");
       chrome.storage.local.set({
         usage: {},
         co2: {},
         lastOpenedDate: today,
-        _ruleNotiSeen: {}
+        _ruleNotiSeen: {} // reset dedupe map across days
       });
     }
   });
 }
 setInterval(checkAndResetForNewDay, 60 * 1000);
 
-// === Midnight reset using chrome.alarms ===
+// === Precise midnight reset using chrome.alarms ===
 function scheduleMidnightAlarm() {
   const now = new Date();
   const midnight = new Date(now);
-  midnight.setHours(24, 0, 5, 0);
+  midnight.setHours(24, 0, 5, 0); // 5s after midnight to avoid race
   const when = midnight.getTime();
-  console.log(`[ALARM] Scheduling midnight reset at ${midnight}`);
   chrome.alarms.create("midnightReset", { when });
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "midnightReset") {
-    console.log("[ALARM] Midnight reset triggered");
     checkAndResetForNewDay();
-    scheduleMidnightAlarm();
+    scheduleMidnightAlarm(); // schedule next day
   }
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("[BG] onInstalled → scheduling reset");
   scheduleMidnightAlarm();
   checkAndResetForNewDay();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  console.log("[BG] onStartup → scheduling reset");
   scheduleMidnightAlarm();
   checkAndResetForNewDay();
 });
 
 // === Event Listeners ===
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message) return;
 
@@ -325,7 +297,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       domain
     });
     DYNAMIC_GB_RATES[domain] = { gbPerHour: gb, lastUpdated: Date.now() };
-    console.log(`[VIDEO_STATS] Updated dynamic GB rate for ${domain}: ${gb} GB/h`);
     chrome.storage.local.set({ dynamicRates: DYNAMIC_GB_RATES });
   }
 
@@ -335,46 +306,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     return true;
   }
-
-  // Stable Prediction
-  if (message.action === "predictCO2") {
-    const daysAhead = message.days;
-    if (daysAhead < 1 || daysAhead > 7) {
-      sendResponse({ success: false, prediction: "Please enter a number between 1 and 7." });
-      return true;
-    }
-
-    const today = new Date().toISOString().split("T")[0];
-    const storageKey = `prediction_${today}_${daysAhead}`;
-
-    chrome.storage.local.get(["dailyHistory", storageKey], (data) => {
-      if (data[storageKey]) {
-        console.log(`[PREDICT] Cache hit → ${storageKey} = ${data[storageKey]}`);
-        sendResponse({ success: true, prediction: data[storageKey] });
-        return;
-      }
-
-      const dailyHistory = data.dailyHistory || [];
-      if (dailyHistory.length < 2) {
-        console.warn("[PREDICT] Not enough history for prediction");
-        sendResponse({ success: false, prediction: "Not enough data" });
-        return;
-      }
-
-      const avgDailyCO2 = dailyHistory.reduce((sum, day) => sum + (day.totals?.co2 || 0), 0) / dailyHistory.length;
-      const predictedValue = (avgDailyCO2 * daysAhead).toFixed(2);
-      console.log(`[PREDICT] Predicted CO₂ for ${daysAhead} days ahead = ${predictedValue}`);
-
-      chrome.storage.local.set({ [storageKey]: predictedValue }, () => {
-        sendResponse({ success: true, prediction: predictedValue });
-      });
-    });
-
-    return true;
-  }
 });
 
-// === Tab switch ===
+// Tab switch
 chrome.tabs.onActivated.addListener(function (info) {
   chrome.tabs.get(info.tabId, function (tab) {
     if (!tab || !tab.url) return;
@@ -382,7 +316,6 @@ chrome.tabs.onActivated.addListener(function (info) {
     const now = Date.now();
     if (currentDomain && startTimestamp) {
       const timeSpent = Math.floor((now - startTimestamp) / 1000);
-      console.log(`[TAB] Switched tab → saving ${timeSpent}s for ${currentDomain}`);
       saveTime(currentDomain, timeSpent);
     }
     currentTabId = info.tabId;
@@ -391,14 +324,13 @@ chrome.tabs.onActivated.addListener(function (info) {
   });
 });
 
-// === URL change ===
+// URL change
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (tab && tab.active && changeInfo.url) {
     const domain = getDomainFromUrl(changeInfo.url);
     const now = Date.now();
     if (currentDomain && startTimestamp) {
       const timeSpent = Math.floor((now - startTimestamp) / 1000);
-      console.log(`[TAB] URL changed → saving ${timeSpent}s for ${currentDomain}`);
       saveTime(currentDomain, timeSpent);
     }
     currentTabId = tabId;
@@ -407,7 +339,7 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   }
 });
 
-// === AFK detection ===
+// AFK detection
 setInterval(() => {
   chrome.windows.getLastFocused({ populate: true }, (window) => {
     if (!window || !window.focused || !window.tabs) return;
@@ -426,14 +358,49 @@ setInterval(() => {
   });
 }, 1000);
 
-// === Final save on suspend ===
+// Final save on suspend
 chrome.runtime.onSuspend.addListener(() => {
   const now = Date.now();
   const timeSpent = Math.floor((now - startTimestamp) / 1000);
   if (currentDomain && timeSpent > 0) {
-    console.log(`[SUSPEND] Saving final ${timeSpent}s for ${currentDomain}`);
     saveTime(currentDomain, timeSpent);
   }
 });
 
-console.log("Background script loaded with detailed debug logging.");
+// ====== Stable Prediction Logic Using Real dailyHistory ======
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "predictCO2") {
+    const daysAhead = request.days;
+    if (daysAhead < 1 || daysAhead > 7) {
+      sendResponse({ success: false, prediction: "Please enter a number between 1 and 7." });
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const storageKey = `prediction_${today}_${daysAhead}`;
+
+    chrome.storage.local.get(["dailyHistory", storageKey], (data) => {
+      if (data[storageKey]) {
+        sendResponse({ success: true, prediction: data[storageKey] });
+        return;
+      }
+
+      const dailyHistory = data.dailyHistory || [];
+      if (dailyHistory.length < 2) {
+        sendResponse({ success: false, prediction: "Not enough data" });
+        return;
+      }
+
+      const avgDailyCO2 = dailyHistory.reduce((sum, day) => sum + (day.totals?.co2 || 0), 0) / dailyHistory.length;
+      const predictedValue = (avgDailyCO2 * daysAhead).toFixed(2);
+
+      chrome.storage.local.set({ [storageKey]: predictedValue }, () => {
+        sendResponse({ success: true, prediction: predictedValue });
+      });
+    });
+
+    return true;
+  }
+});
+
+console.log("Background script loaded.");
