@@ -1,3 +1,5 @@
+importScripts("gamification.js");
+
 // === Load rule engine (MV3 service worker classic script) ===
 try {
   importScripts("rule_suggestions.js");
@@ -199,6 +201,10 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
       if (typeof self.getNotificationsFromHistory === "function") {
         const notifications = self.getNotificationsFromHistory(history);
         sendRuleNotifications(notifications);
+      }
+
+      if (typeof self.updateGamification === "function") {
+        self.updateGamification(today.totals.co2, dateStr);
       }
     });
   });
