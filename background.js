@@ -7,7 +7,6 @@ try {
 }
 
 // === Configuration Tables ===
-
 const DATA_USAGE_PER_HOUR = {
   "youtube.com": 1.5,
   "netflix.com": 3.0,
@@ -57,7 +56,6 @@ const STATE_EMISSION_FACTOR = {
 };
 
 // === New Dynamic Streaming Data ===
-
 const DYNAMIC_GB_RATES = {};
 
 const RESOLUTION_GB_MAP = {
@@ -112,13 +110,11 @@ function calcGbPerHourFromStats({ resolution, downlink, avgReqMB, domain }) {
 }
 
 // === Runtime Variables ===
-
 let currentTabId = null;
 let currentDomain = null;
 let startTimestamp = Date.now();
 
 // === Helpers ===
-
 function getDomainFromUrl(url) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -284,7 +280,6 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 // === Event Listeners ===
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message) return;
 
@@ -403,4 +398,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-console.log("Background script loaded.");
+// === Periodic Notifications Check (new) ===
+setInterval(() => {
+  chrome.storage.local.get(['dailyHistory'], (res) => {
+    const history = res.dailyHistory || [];
+    if (typeof self.getNotificationsFromHistory === "function") {
+      const notifications = self.getNotificationsFromHistory(history);
+      sendRuleNotifications(notifications);
+    }
+  });
+}, 1 * 60 * 1000); // every 1 minutes
+
+console.log("Background script loaded with periodic notifications.");
