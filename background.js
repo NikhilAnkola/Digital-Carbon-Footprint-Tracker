@@ -1,3 +1,5 @@
+import { updateGamification } from "./gamification.js";
+
 // === Load rule engine (MV3 service worker classic script) ===
 try {
   importScripts("rule_suggestions.js");
@@ -25,7 +27,7 @@ const DATA_USAGE_PER_HOUR = {
 
 const ELECTRICITY_PER_GB_KWH = 0.12;
 
-// === Fixed: Proper state names (removed accidental spacing/typos) ===
+// === State emission factors (kept names as-is) ===
 const STATE_EMISSION_FACTOR = {
   "Andhra Pradesh": 654,
   "Arunachal Pradesh": 24,
@@ -206,6 +208,10 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
     today.totals.seconds += secondsSpent;
     today.totals.gb += gbUsed;
     today.totals.co2 += co2;
+
+    // === Gamification update ===
+    const todayKey = new Date().toISOString().slice(0, 10);
+    updateGamification(today.totals.co2, todayKey);
 
     history.sort((a, b) => new Date(a.date) - new Date(b.date));
     while (history.length > 28) history.shift();
