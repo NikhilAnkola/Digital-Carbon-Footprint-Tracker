@@ -1,5 +1,32 @@
 importScripts("gamification.js");
 
+// === Helper: set alarm for next midnight ===
+function scheduleMidnightUpdate() {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+
+  const msUntilMidnight = tomorrow.getTime() - now.getTime();
+
+  // Create a one-time alarm at next midnight
+  chrome.alarms.create("midnightGamificationUpdate", { when: Date.now() + msUntilMidnight });
+}
+
+// === On install / reload ===
+chrome.runtime.onInstalled.addListener(() => {
+  rebuildGamificationData();
+  scheduleMidnightUpdate();
+});
+
+// === Alarm listener ===
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "midnightGamificationUpdate") {
+    updateGamification();       // run gamification update at midnight
+    scheduleMidnightUpdate();   // reschedule for the next midnight
+  }
+});
+
 // === Load rule engine (MV3 service worker classic script) ===
 try {
   importScripts("rule_suggestions.js");
