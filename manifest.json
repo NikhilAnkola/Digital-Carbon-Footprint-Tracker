@@ -7,15 +7,13 @@
     "tabs",
     "storage",
     "notifications",
-    "alarms",
-    "idle"
+    "alarms"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
