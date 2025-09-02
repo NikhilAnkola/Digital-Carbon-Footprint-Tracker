@@ -273,13 +273,25 @@ function saveTime(domain, secondsSpent) {
 // === New Day Auto-Reset (kept) ===
 function checkAndResetForNewDay() {
   const today = getLocalDateString();
-  chrome.storage.local.get(["lastOpenedDate"], (res) => {
+  chrome.storage.local.get(["lastOpenedDate", "dailyHistory"], (res) => {
     if (res.lastOpenedDate !== today) {
+      const history = Array.isArray(res.dailyHistory) ? res.dailyHistory : [];
+
+      // Create a fresh entry for today
+      if (!history.find(e => e.date === today)) {
+        history.push({ date: today, domains: {}, totals: { seconds: 0, gb: 0, co2: 0 } });
+      }
+
+      // Keep only last 28 days
+      history.sort((a, b) => new Date(a.date) - new Date(b.date));
+      while (history.length > 28) history.shift();
+
       chrome.storage.local.set({
         usage: {},
         co2: {},
         lastOpenedDate: today,
-        _ruleNotiSeen: {} // reset dedupe map across days
+        _ruleNotiSeen: {}, // reset dedupe map across days
+        dailyHistory: history
       });
     }
   });
