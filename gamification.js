@@ -9,24 +9,21 @@ function calculatePointsFromCO2(co2) {
   return 5;
 }
 
+// Exclusive-tier garden mapping (per your spec)
 function updateGarden(points) {
-  const counters = { seedling: 0, plant: 0, tree: 0 };
+  const trees = Math.floor(points / 100);
+  const remainder = points % 100;
 
-  let remaining = points;
-  while (remaining >= 100) {
-    counters.tree++;
-    remaining -= 100;
-  }
-  while (remaining >= 50) {
-    counters.plant++;
-    remaining -= 50;
-  }
-  while (remaining >= 20) {
-    counters.seedling++;
-    remaining -= 20;
+  let plant = 0;
+  let seedling = 0;
+
+  if (remainder >= 50) {
+    plant = 1;
+  } else if (remainder >= 20) {
+    seedling = 1;
   }
 
-  return counters;
+  return { seedling, plant, tree: trees };
 }
 
 // ---------------- Main Daily Update ----------------
