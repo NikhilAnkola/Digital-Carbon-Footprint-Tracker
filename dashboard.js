@@ -176,7 +176,7 @@ function getEquivalent(co2g) {
       ? `${Math.floor(co2g / 1000)} kg ${Math.round(co2g % 1000)} g`
       : `${co2g.toFixed(2)} g`;
 
-  return `${co2Formatted} = ${kmDriven} km driven or ${phoneCharges}% phone charged`;
+  return `${kmDriven} km driven or ${phoneCharges}% phone charged`;
 }
 
 // ---------------- LOADERS ----------------
