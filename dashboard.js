@@ -182,9 +182,11 @@ function getEquivalent(co2g) {
 // ---------------- LOADERS ----------------
 
 function loadUsageStats() {
-  chrome.storage.local.get(["usage", "co2"], (res) => {
-    const usage = res.usage || {};
-    const co2 = res.co2 || {};
+  const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD format
+  chrome.storage.local.get(["dailyHistory"], (res) => {
+    const history = res.dailyHistory || [];
+    const todayEntry = history.find((h) => h.date === today);
+
     const container = document.getElementById("usageContainer");
     const totalSpan = document.getElementById("totalCO2");
     const equivSpan = document.getElementById("co2Equivalent");
@@ -192,13 +194,20 @@ function loadUsageStats() {
     let html = "<ul>";
     let totalCO2 = 0;
 
-    for (let domain in usage) {
-      const time = usage[domain];
-      const grams = co2[domain] || 0;
-      totalCO2 += grams;
-      html += `<li><b>${domain}</b>: ${formatTime(time)} → ${grams.toFixed(
-        2
-      )} g CO₂</li>`;
+    if (todayEntry && todayEntry.domains) {
+      for (let domain in todayEntry.domains) {
+        const data = todayEntry.domains[domain];
+        const time = data.seconds || 0;
+        const grams = data.co2 || 0;
+        if (time > 0 || grams > 0) {
+          totalCO2 += grams;
+          html += `<li><b>${domain}</b>: ${formatTime(time)} → ${grams.toFixed(
+            2
+          )} g CO₂</li>`;
+        }
+      }
+    } else {
+      html += "<li>No activity yet today</li>";
     }
 
     html += "</ul>";
