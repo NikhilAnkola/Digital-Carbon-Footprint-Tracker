@@ -19,6 +19,10 @@ chrome.runtime.onInstalled.addListener(() => {
   scheduleMidnightUpdate();
 });
 
+chrome.runtime.onStartup.addListener(() => {
+  scheduleMidnightUpdate();
+});
+
 // === Alarm listener ===
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "midnightGamificationUpdate") {
@@ -228,10 +232,6 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
       if (typeof self.getNotificationsFromHistory === "function") {
         const notifications = self.getNotificationsFromHistory(history);
         sendRuleNotifications(notifications);
-      }
-
-      if (typeof self.updateGamification === "function") {
-        self.updateGamification(today.totals.co2, dateStr);
       }
     });
   });
