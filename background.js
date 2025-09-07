@@ -26,7 +26,15 @@ chrome.runtime.onStartup.addListener(() => {
 // === Alarm listener ===
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "midnightGamificationUpdate") {
-    updateGamification();       // run gamification update at midnight
+    const today = new Date().toISOString().split("T")[0];
+
+    chrome.storage.local.get(["lastGamificationUpdate"], (res) => {
+      if (res.lastGamificationUpdate !== today) {
+        updateGamification(); // run only if not updated today
+        chrome.storage.local.set({ lastGamificationUpdate: today });
+      }
+    });
+
     scheduleMidnightUpdate();   // reschedule for the next midnight
   }
 });
