@@ -55,6 +55,55 @@
       });
     }
 
+    // Rule 3: Positive reinforcement if CO₂ < 100g
+    if (typeof totals.co2 === "number" && totals.co2 < 100) {
+      notifications.push({
+        id: "low_co2_positive",
+        title: "Great Job!",
+        message: "You're keeping CO₂ emissions low today. Keep it up!"
+      });
+    }
+
+    // Rule 4: Data usage > 1GB
+    if (typeof totals.gb === "number" && totals.gb > 1) {
+      notifications.push({
+        id: "high_data_usage",
+        title: "High Data Usage",
+        message: "You've used over 1GB today. Try enabling data saver or lowering video resolution."
+      });
+    }
+
+    // Rule 5: Idle time warning (> 3h total)
+    if (typeof totals.seconds === "number" && totals.seconds > 10800) {
+      notifications.push({
+        id: "long_usage",
+        title: "Time for a Break?",
+        message: "You've been online for over 3 hours today. Take a short break for your health!"
+      });
+    }
+
+    // Rule 6: Streak motivation (last 3 days < 300g)
+    const last3 = dailyHistory.slice(-3);
+    if (last3.length === 3 && last3.every(d => (d.totals?.co2 || 0) < 300)) {
+      notifications.push({
+        id: "streak_motivation",
+        title: "Awesome Streak!",
+        message: "3 days in a row with CO₂ under 300g. Keep going strong!"
+      });
+    }
+
+    // Rule 7: Specific streaming site > 1h
+    for (const site of ["youtube.com", "netflix.com"]) {
+      const siteData = domains[site];
+      if (siteData && typeof siteData.seconds === "number" && siteData.seconds > 3600) {
+        notifications.push({
+          id: `${site}_limit_suggestion`,
+          title: `${site} Usage`,
+          message: `You've spent over 1 hour on ${site}. Maybe time for a break?`
+        });
+      }
+    }
+
     return notifications;
   }
 
