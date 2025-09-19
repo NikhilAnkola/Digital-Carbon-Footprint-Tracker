@@ -99,35 +99,39 @@ function rebuildGamificationData() {
 
     const todayStr = getLocalDateStr();
     const endedDays = history.filter(day => day.date < todayStr);
+
     if (endedDays.length === 0) {
       chrome.storage.local.set({
-        streakData: { current: 0, max: 0 },
-        ecoPointsData: { points: 0, counters: { seedling: 0, plant: 0, tree: 0 } },
+        streakData: { current: 0, max: res.streakData?.max || 0 }, // keep old max
+        ecoPointsData: res.ecoPointsData || { points: 0, counters: { seedling: 0, plant: 0, tree: 0 } },
         lastGamificationProcessedDate: null
       });
       return;
     }
 
-    // Preserve existing totals if any
+    // Start with saved data so points & max streak persist
     let streak = res.streakData || { current: 0, max: 0 };
     let ecoData = res.ecoPointsData || { points: 0, counters: { seedling: 0, plant: 0, tree: 0 } };
 
-    endedDays.forEach((entry) => {
+    // Recompute current streak only (do NOT reset points)
+    let currentStreak = 0;
+    endedDays.forEach(entry => {
       const co2 = entry.totals?.co2 || 0;
-      const points = calculatePointsFromCO2(co2);
-
-      ecoData.points += points;
       if (co2 < 300) {
-        streak.current++;
-        streak.max = Math.max(streak.max, streak.current);
+        currentStreak++;
+        if (currentStreak > streak.max) streak.max = currentStreak;
       } else {
-        streak.current = 0;
+        currentStreak = 0;
       }
     });
 
-    ecoData.counters = updateGarden(ecoData.points);
-    const lastEndedDate = endedDays[endedDays.length - 1].date;
+    // Save the new current streak
+    streak.current = currentStreak;
 
+    // Update garden from total points (points never reduced)
+    ecoData.counters = updateGarden(ecoData.points);
+
+    const lastEndedDate = endedDays[endedDays.length - 1].date;
     chrome.storage.local.set({
       streakData: streak,
       ecoPointsData: ecoData,
