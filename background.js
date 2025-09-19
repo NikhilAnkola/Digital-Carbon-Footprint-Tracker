@@ -370,6 +370,19 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message) return;
 
+  // 🔹 Add Force Save for Dashboard here
+  if (message.type === "FORCE_SAVE_BEFORE_DASHBOARD") {
+    if (currentDomain && startTimestamp) {
+      const now = Date.now();
+      const timeSpent = Math.floor((now - startTimestamp) / 1000);
+      saveTime(currentDomain, timeSpent);
+      startTimestamp = now;
+    }
+    sendResponse({ success: true });
+    return true; // ensures async response works correctly
+  }
+
+  // Existing code below
   if (message.type === 'VIDEO_STATS') {
     const domain = message.domain;
     const gb = calcGbPerHourFromStats({
