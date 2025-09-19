@@ -1,3 +1,4 @@
+// background.js
 importScripts("gamification.js");
 
 // === Helper: set alarm for next midnight ===
@@ -7,35 +8,67 @@ function scheduleMidnightUpdate() {
   tomorrow.setDate(now.getDate() + 1);
   tomorrow.setHours(0, 0, 0, 0);
 
-  const msUntilMidnight = tomorrow.getTime() - now.getTime();
-
-  // Create a one-time alarm at next midnight
-  chrome.alarms.create("midnightGamificationUpdate", { when: Date.now() + msUntilMidnight });
+  const when = tomorrow.getTime();
+  chrome.alarms.create("midnightGamificationUpdate", { when });
 }
 
-// === On install / reload ===
+// helper date strings
+function getLocalDateString(date = new Date()) {
+  const pad = (n) => (n < 10 ? "0" + n : n);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+function getYesterdayDateString() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return getLocalDateString(d);
+}
+
+// === On install / reload / startup ===
 chrome.runtime.onInstalled.addListener(() => {
-  rebuildGamificationData();
+  // Build gamification from history if not already present
+  chrome.storage.local.get(["ecoPointsData", "streakData"], (res) => {
+    if (!res.ecoPointsData || !res.streakData) {
+      rebuildGamificationData();
+    }
+  });
   scheduleMidnightUpdate();
 });
 
 chrome.runtime.onStartup.addListener(() => {
+  // Schedule alarm for next midnight
   scheduleMidnightUpdate();
+
+  // If extension was closed over midnight (or laptop was shut down)
+  // process yesterday if not yet processed.
+  const yesterday = getYesterdayDateString();
+  chrome.storage.local.get(["lastGamificationProcessedDate", "dailyHistory"], (res) => {
+    const lastProcessed = res.lastGamificationProcessedDate || null;
+    const history = Array.isArray(res.dailyHistory) ? res.dailyHistory : [];
+
+    // Only run if yesterday exists in history (a fully completed day present)
+    const yesterdayEntry = history.find(h => h.date === yesterday);
+    if (yesterdayEntry && lastProcessed !== yesterday) {
+      // run update once for yesterday and record it
+      updateGamification(); // gamification.js function exposed to self
+      chrome.storage.local.set({ lastGamificationProcessedDate: yesterday });
+    }
+  });
 });
 
 // === Alarm listener ===
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "midnightGamificationUpdate") {
-    const today = new Date().toISOString().split("T")[0];
-
-    chrome.storage.local.get(["lastGamificationUpdate"], (res) => {
-      if (res.lastGamificationUpdate !== today) {
-        updateGamification(); // run only if not updated today
-        chrome.storage.local.set({ lastGamificationUpdate: today });
+    // At midnigh t, ensure we only process once for the newly finished day
+    const yesterday = getYesterdayDateString();
+    chrome.storage.local.get(["lastGamificationProcessedDate"], (res) => {
+      if (res.lastGamificationProcessedDate !== yesterday) {
+        updateGamification();
+        chrome.storage.local.set({ lastGamificationProcessedDate: yesterday });
       }
     });
 
-    scheduleMidnightUpdate();   // reschedule for the next midnight
+    // schedule next midnight
+    scheduleMidnightUpdate();
   }
 });
 
@@ -120,29 +153,29 @@ const CATEGORY_DEFAULT_GB = {
 };
 
 function getCategoryFromDomain(domain) {
-  if (!domain) return 'default';
+  if (!domain) return "default";
   domain = domain.toLowerCase();
-  if (domain.includes('youtube') || domain.includes('netflix') || domain.includes('primevideo') || domain.includes('twitch') || domain.includes('hotstar')) return 'streaming';
-  if (domain.includes('instagram') || domain.includes('facebook') || domain.includes('twitter') || domain.includes('tiktok')) return 'social';
-  if (domain.includes('whatsapp') || domain.includes('telegram') || domain.includes('messenger')) return 'messaging';
-  if (domain.includes('docs.google') || domain.includes('office') || domain.includes('slack')) return 'docs';
-  if (domain.includes('github') || domain.includes('gitlab')) return 'code';
-  return 'default';
+  if (domain.includes("youtube") || domain.includes("netflix") || domain.includes("primevideo") || domain.includes("twitch") || domain.includes("hotstar")) return "streaming";
+  if (domain.includes("instagram") || domain.includes("facebook") || domain.includes("twitter") || domain.includes("tiktok")) return "social";
+  if (domain.includes("whatsapp") || domain.includes("telegram") || domain.includes("messenger")) return "messaging";
+  if (domain.includes("docs.google") || domain.includes("office") || domain.includes("slack")) return "docs";
+  if (domain.includes("github") || domain.includes("gitlab")) return "code";
+  return "default";
 }
 
 function calcGbPerHourFromStats({ resolution, downlink, avgReqMB, domain }) {
-  if (resolution && typeof resolution === 'number') {
+  if (resolution && typeof resolution === "number") {
     const keys = Object.keys(RESOLUTION_GB_MAP).map(Number).sort((a, b) => b - a);
     for (let key of keys) {
       if (resolution >= key) return RESOLUTION_GB_MAP[key];
     }
   }
-  if (downlink && typeof downlink === 'number') {
+  if (downlink && typeof downlink === "number") {
     if (downlink >= 20) return CATEGORY_DEFAULT_GB.streaming * 2.0;
     if (downlink >= 5) return CATEGORY_DEFAULT_GB.streaming;
     return CATEGORY_DEFAULT_GB.streaming * 0.6;
   }
-  if (avgReqMB && typeof avgReqMB === 'number') {
+  if (avgReqMB && typeof avgReqMB === "number") {
     if (avgReqMB >= 2) return CATEGORY_DEFAULT_GB.streaming * 2.0;
     if (avgReqMB >= 0.5) return CATEGORY_DEFAULT_GB.streaming;
   }
@@ -162,11 +195,6 @@ function getDomainFromUrl(url) {
   } catch {
     return null;
   }
-}
-
-function getLocalDateString(date = new Date()) {
-  const pad = (n) => (n < 10 ? '0' + n : n);
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function getGbPerHourForDomain(domain) {
@@ -232,14 +260,20 @@ function addToDailyHistory(domain, secondsSpent, gbUsed, co2) {
     today.totals.gb += gbUsed;
     today.totals.co2 += co2;
 
-    // Sort and trim to last 28 days
+    // Sort and trim to last 28 days (history array is still for UI/historical view only)
     history.sort((a, b) => new Date(a.date) - new Date(b.date));
     while (history.length > 28) history.shift();
 
     chrome.storage.local.set({ dailyHistory: history }, () => {
+      // Run notifications based on updated history
       if (typeof self.getNotificationsFromHistory === "function") {
         const notifications = self.getNotificationsFromHistory(history);
         sendRuleNotifications(notifications);
+      }
+
+       // ✅ Trigger once-per-day notifications after updating history
+      if (typeof triggerNotificationsOncePerDay === "function") {
+        triggerNotificationsOncePerDay(history);
       }
     });
   });
@@ -285,12 +319,12 @@ function checkAndResetForNewDay() {
     if (res.lastOpenedDate !== today) {
       const history = Array.isArray(res.dailyHistory) ? res.dailyHistory : [];
 
-      // Create a fresh entry for today
+      // Create a fresh entry for today if missing
       if (!history.find(e => e.date === today)) {
         history.push({ date: today, domains: {}, totals: { seconds: 0, gb: 0, co2: 0 } });
       }
 
-      // Keep only last 28 days
+      // Keep only last 28 days for UI history
       history.sort((a, b) => new Date(a.date) - new Date(b.date));
       while (history.length > 28) history.shift();
 
@@ -451,8 +485,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// === Periodic Notifications Check (new) ===
-setInterval(() => {
+// Run notifications only when history updates, not every minute
+function triggerNotificationsOncePerDay() {
   chrome.storage.local.get(['dailyHistory'], (res) => {
     const history = res.dailyHistory || [];
     if (typeof self.getNotificationsFromHistory === "function") {
@@ -460,6 +494,6 @@ setInterval(() => {
       sendRuleNotifications(notifications);
     }
   });
-}, 1 * 60 * 1000); // every 1 minutes
+}
 
 console.log("Background script loaded with periodic notifications.");
