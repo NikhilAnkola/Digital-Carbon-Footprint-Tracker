@@ -1,5 +1,6 @@
 // ---------------- Helper Functions ----------------
 
+// Points based on CO₂ for one day
 function calculatePointsFromCO2(co2) {
   if (co2 > 500) return 0;
   if (co2 > 400) return 1;
@@ -9,7 +10,7 @@ function calculatePointsFromCO2(co2) {
   return 5;
 }
 
-// Exclusive-tier garden mapping (per your spec)
+// Garden mapping based on total points
 function updateGarden(points) {
   const trees = Math.floor(points / 100);
   const remainder = points % 100;
@@ -26,63 +27,58 @@ function updateGarden(points) {
   return { seedling, plant, tree: trees };
 }
 
-// ---------------- Helper: Get local YYYY-MM-DD ----------------
+// Get local date string (YYYY-MM-DD)
 function getLocalDateStr() {
   const now = new Date();
-  now.setHours(0, 0, 0, 0); // Midnight in local time
-  return now.toLocaleDateString("en-CA"); // YYYY-MM-DD
+  now.setHours(0, 0, 0, 0);
+  return now.toLocaleDateString("en-CA");
 }
 
 // ---------------- Daily Gamification Update ----------------
+
 function updateGamification() {
   chrome.storage.local.get(
     ["dailyHistory", "streakData", "ecoPointsData", "lastGamificationProcessedDate"],
     (res) => {
       const history = res.dailyHistory || [];
-      if (history.length < 1) return; // No history
+      if (history.length < 1) return;
 
-      // Get today's date in local time
       const todayStr = getLocalDateStr();
-
-      // Only include fully completed days (exclude today)
       const endedDays = history.filter(day => day.date < todayStr);
-      if (endedDays.length < 1) return; // No completed day yet
+      if (endedDays.length < 1) return;
 
-      // Last fully completed day = yesterday
-      const yesterdayEntry = endedDays[endedDays.length - 1];
-      if (!yesterdayEntry || !yesterdayEntry.totals || !yesterdayEntry.date) return;
+      const yesterday = endedDays[endedDays.length - 1];
+      if (!yesterday || !yesterday.totals || !yesterday.date) return;
 
-      const targetDate = yesterdayEntry.date;
+      const targetDate = yesterday.date;
       const lastProcessed = res.lastGamificationProcessedDate;
 
-      // Skip if already processed
+      // Process only once per day
       if (lastProcessed === targetDate) {
         console.log("Gamification already processed for", targetDate);
         return;
       }
 
-      const yesterdayCO2 = yesterdayEntry.totals.co2 || 0;
-
-      // --- Streak ---
+      // Use existing streak & ecoPoints so trimming history doesn't reset totals
       let streak = res.streakData || { current: 0, max: 0 };
-      if (yesterdayCO2 < 300) {
+      let ecoData = res.ecoPointsData || { points: 0, counters: { seedling: 0, plant: 0, tree: 0 } };
+
+      const co2 = yesterday.totals.co2 || 0;
+
+      // --- Streak update ---
+      if (co2 < 300) {
         streak.current++;
         streak.max = Math.max(streak.max, streak.current);
       } else {
         streak.current = 0;
       }
 
-      // --- Eco Points ---
-      let ecoData = res.ecoPointsData || {
-        points: 0,
-        counters: { seedling: 0, plant: 0, tree: 0 }
-      };
-
-      const yesterdayPoints = calculatePointsFromCO2(yesterdayCO2);
-      ecoData.points += yesterdayPoints;
+      // --- Eco Points update ---
+      const points = calculatePointsFromCO2(co2);
+      ecoData.points += points;
       ecoData.counters = updateGarden(ecoData.points);
 
-      // Save results
+      // Save
       chrome.storage.local.set({
         streakData: streak,
         ecoPointsData: ecoData,
@@ -95,34 +91,32 @@ function updateGamification() {
 }
 
 // ---------------- Retroactive Rebuild ----------------
+
 function rebuildGamificationData() {
-  chrome.storage.local.get(["dailyHistory"], (res) => {
+  chrome.storage.local.get(["dailyHistory", "ecoPointsData", "streakData"], (res) => {
     const history = res.dailyHistory || [];
     if (history.length === 0) return;
 
-    let streak = { current: 0, max: 0 };
-    let ecoData = { points: 0, counters: { seedling: 0, plant: 0, tree: 0 } };
-
-    // Get today's date in local time
     const todayStr = getLocalDateStr();
-
-    // Include only fully completed days (exclude today)
     const endedDays = history.filter(day => day.date < todayStr);
     if (endedDays.length === 0) {
-      // No completed days, reset everything
       chrome.storage.local.set({
-        streakData: streak,
-        ecoPointsData: ecoData,
+        streakData: { current: 0, max: 0 },
+        ecoPointsData: { points: 0, counters: { seedling: 0, plant: 0, tree: 0 } },
         lastGamificationProcessedDate: null
       });
       return;
     }
 
+    // Preserve existing totals if any
+    let streak = res.streakData || { current: 0, max: 0 };
+    let ecoData = res.ecoPointsData || { points: 0, counters: { seedling: 0, plant: 0, tree: 0 } };
+
     endedDays.forEach((entry) => {
       const co2 = entry.totals?.co2 || 0;
       const points = calculatePointsFromCO2(co2);
-      ecoData.points += points;
 
+      ecoData.points += points;
       if (co2 < 300) {
         streak.current++;
         streak.max = Math.max(streak.max, streak.current);
@@ -132,8 +126,6 @@ function rebuildGamificationData() {
     });
 
     ecoData.counters = updateGarden(ecoData.points);
-
-    // Last fully completed day
     const lastEndedDate = endedDays[endedDays.length - 1].date;
 
     chrome.storage.local.set({
