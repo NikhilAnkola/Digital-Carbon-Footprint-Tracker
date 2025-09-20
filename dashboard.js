@@ -74,17 +74,11 @@ document.addEventListener("DOMContentLoaded", () => {
     endInput.addEventListener("change", loadDailyHistory);
   }
 
-  // --- Force save data before loading dashboard ---
-  chrome.runtime.sendMessage({ type: "FORCE_SAVE_BEFORE_DASHBOARD" }, () => {
-    // Now load and render CO2 + usage stats
-    loadUsageStats();
+  // Load and render CO2 + usage stats
+  loadUsageStats();
 
-    // Load and render 28-day daily history
-    loadDailyHistory();
-
-    // Load gamification UI after data is saved
-    loadGamificationUI();
-  }); 
+  // Load and render 28-day daily history
+  loadDailyHistory();
 
   // Prediction feature
   const predictBtn = document.getElementById("predictBtn");
@@ -302,6 +296,9 @@ function loadGamificationUI() {
     ).textContent = `Seedlings: ${seedling}, Plants: ${plant}, Trees: ${tree}`;
   });
 }
+
+// Call once when dashboard loads
+document.addEventListener("DOMContentLoaded", loadGamificationUI);
 
 // Auto-update gamification section whenever data changes
 chrome.storage.onChanged.addListener((changes, namespace) => {
