@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <title>Digital Carbon Footprint Tracker</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <!-- <link rel="stylesheet" href="dashboard.css">
-    <style>
+    <link rel="stylesheet" href="dashboard.css">
+    <!-- <style>
         :root { color-scheme: light dark; }
         body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
@@ -62,51 +62,59 @@
 
     <hr>
 
-    <!-- === Today's Usage: CO₂ by Site (Pie) === -->
-    <section class="card">
-    <h2>Today's Usage — CO₂ by Site</h2>
-    <div class="chart-wrap">
-        <canvas id="todayPieChart" width="400" height="400" aria-label="Today CO2 share by site"></canvas>
-        <div id="todayPieEmpty" class="empty hidden">No data for today yet.</div>
-    </div>
-    </section>
+    <div class="row">
+      <!-- === Today's Usage: CO₂ by Site (Pie) === -->
+      <section class="card">
+      <h2>Today's Usage — CO₂ by Site</h2>
+      <div class="chart-wrap">
+          <canvas id="todayPieChart" width="400" height="400" aria-label="Today CO2 share by site"></canvas>
+          <div id="todayPieEmpty" class="empty hidden">No data for today yet.</div>
+      </div>
+      </section>
 
-    <!-- Today's Usage Summary -->
-    <h3>Today's Usage Summary</h3>
-    <div id="usageContainer"><p>Loading...</p></div>
-    <ul>
-        <li><b>Total CO₂ emitted:</b> <span id="totalCO2">0</span> g</li>
-        <li><b>Equivalent to:</b> <span id="co2Equivalent">–</span></li>
-    </ul>
+      <!-- Today's Usage Summary -->
+      <section class="card">
+        <h2>Today's Usage Summary</h2>
+        <div id="usageContainer"><p>Loading...</p></div>
+        <ul>
+            <li><b>Total CO₂ emitted:</b> <span id="totalCO2">0</span> g</li>
+            <li><b>Equivalent to:</b> <span id="co2Equivalent">–</span></li>
+        </ul>
+      </section>
+    </div>
 
     <!-- Prediction Section -->
-    <div>
+      <section class="card centered">
         <label>Days Ahead:</label>
         <input type="number" id="daysAhead" min="1" max="7" value="1">
         <button id="predictBtn">Predict</button>
         <div id="predictionResult">Prediction will appear here.</div>
-    </div>
+      </section>
 
     <hr />
 
-    <!-- === Last 28 Days: CO₂ per Day (Bar, 7 at a time) === -->
-    <section class="card">
-    <div class="header-row">
-        <h2>Last 28 Days — CO₂ per Day</h2>
-        <div class="pager">
-        <button id="prev7" type="button" class="btn">Prev 7</button>
-        <button id="next7" type="button" class="btn">Next 7</button>
+    <div class="row">
+      <!-- === Last 28 Days: CO₂ per Day (Bar, 7 at a time) === -->
+      <section class="card">
+        <div class="header-row">
+            <h2>Last 28 Days — CO₂ per Day</h2>
+            <div class="pager">
+            <button id="prev7" type="button" class="btn">Prev 7</button>
+            <button id="next7" type="button" class="btn">Next 7</button>
+            </div>
         </div>
-    </div>
-    <div class="chart-wrap">
-        <canvas id="historyBarChart" width="700" height="360" aria-label="Last 28 days CO2 bar chart"></canvas>
-        <div id="historyBarEmpty" class="empty hidden">No history yet.</div>
-    </div>
-    </section>
+        <div class="chart-wrap">
+            <canvas id="historyBarChart" width="700" height="360" aria-label="Last 28 days CO2 bar chart"></canvas>
+            <div id="historyBarEmpty" class="empty hidden">No history yet.</div>
+        </div>
+      </section>
 
-    <!-- Last 28 Days History -->
-    <h3>Last 28 Days History</h3>
-    <div id="historyContainer"><p>Loading history...</p></div>
+      <!-- Last 28 Days History -->
+        <section class="card">
+          <h2>Last 28 Days History</h2>
+          <div id="historyContainer"><p>Loading history...</p></div>
+        </section>
+    </div>    
 
     <hr />
 
@@ -135,9 +143,11 @@
 
     <hr />
 
-    <!-- Buttons -->
-    <button id="resetBtn" class="btn">Reset All Data</button>
-    <button id="refreshChartsBtn" class="btn">Refresh Charts</button>
+    <div class="footer-buttons">
+      <!-- Buttons -->
+      <button id="resetBtn" class="btn">Reset All Data</button>
+      <button id="refreshChartsBtn" class="btn">Refresh Charts</button>
+    </div>
 
     <script src="rule_suggestions.js"></script>
     <script src="dashboard.js" defer></script>
