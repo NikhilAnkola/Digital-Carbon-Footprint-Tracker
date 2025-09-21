@@ -100,10 +100,7 @@ function updateGamification() {
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === "updateGamification") {
     updateGamification();
-  } else if (msg.type === "rebuildGamificationData") {
-    rebuildGamificationData();
   }
 });
 
 self.updateGamification = updateGamification;
-self.rebuildGamificationData = rebuildGamificationData;
