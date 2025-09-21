@@ -94,58 +94,6 @@ function updateGamification() {
   );
 }
 
-// ---------------- Retroactive Rebuild ----------------
-function rebuildGamificationData() {
-  chrome.storage.local.get(["dailyHistory"], (res) => {
-    const history = res.dailyHistory || [];
-    if (history.length === 0) return;
-
-    let streak = { current: 0, max: 0 };
-    let ecoData = { points: 0, counters: { seedling: 0, plant: 0, tree: 0 } };
-
-    // Get today's date in local time
-    const todayStr = getLocalDateStr();
-
-    // Include only fully completed days (exclude today)
-    const endedDays = history.filter(day => day.date < todayStr);
-    if (endedDays.length === 0) {
-      // No completed days, reset everything
-      chrome.storage.local.set({
-        streakData: streak,
-        ecoPointsData: ecoData,
-        lastGamificationProcessedDate: null
-      });
-      return;
-    }
-
-    endedDays.forEach((entry) => {
-      const co2 = entry.totals?.co2 || 0;
-      const points = calculatePointsFromCO2(co2);
-      ecoData.points += points;
-
-      if (co2 < 300) {
-        streak.current++;
-        streak.max = Math.max(streak.max, streak.current);
-      } else {
-        streak.current = 0;
-      }
-    });
-
-    ecoData.counters = updateGarden(ecoData.points);
-
-    // Last fully completed day
-    const lastEndedDate = endedDays[endedDays.length - 1].date;
-
-    chrome.storage.local.set({
-      streakData: streak,
-      ecoPointsData: ecoData,
-      lastGamificationProcessedDate: lastEndedDate
-    }, () => {
-      console.log("Gamification data rebuilt. Last processed day:", lastEndedDate);
-    });
-  });
-}
-
 // ---------------- Listener ----------------
 
 chrome.runtime.onMessage.addListener((msg) => {
