@@ -227,10 +227,12 @@
 
       daysSortedAsc = build28DaySeries(history);
 
-      // adjust pageStart so we remain in valid range (show latest page by default)
-      const lastStart = Math.max(0, daysSortedAsc.length - PAGE_SIZE);
-      if (pageStart > lastStart) pageStart = lastStart;
-      if (daysSortedAsc.length <= PAGE_SIZE) pageStart = 0;
+      // Always show the most recent PAGE_SIZE days by default
+      if (daysSortedAsc.length <= PAGE_SIZE) {
+        pageStart = 0;
+      } else {
+        pageStart = daysSortedAsc.length - PAGE_SIZE;
+      }
 
       renderBarPage();
     });
@@ -243,7 +245,7 @@
       renderBarPage();
     });
     nextBtn.addEventListener('click', () => {
-      pageStart = Math.min(Math.max(0, daysSortedAsc.length - PAGE_SIZE), pageStart + PAGE_SIZE);
+      pageStart = Math.min(daysSortedAsc.length - PAGE_SIZE, pageStart + PAGE_SIZE);
       renderBarPage();
     });
   }
