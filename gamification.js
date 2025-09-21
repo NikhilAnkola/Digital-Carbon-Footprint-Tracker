@@ -41,12 +41,11 @@ function updateGamification() {
       const history = res.dailyHistory || [];
       if (history.length < 1) return; // No history
 
-      // Get today's date in local time
       const todayStr = getLocalDateStr();
 
       // Only include fully completed days (exclude today)
       const endedDays = history.filter(day => day.date < todayStr);
-      if (endedDays.length < 1) return; // No completed day yet
+      if (endedDays.length < 1) return;
 
       // Last fully completed day = yesterday
       const yesterdayEntry = endedDays[endedDays.length - 1];
@@ -63,8 +62,14 @@ function updateGamification() {
 
       const yesterdayCO2 = yesterdayEntry.totals.co2 || 0;
 
-      // --- Streak ---
+      // --- Load existing streak & eco points ---
       let streak = res.streakData || { current: 0, max: 0 };
+      let ecoData = res.ecoPointsData || {
+        points: 0,
+        counters: { seedling: 0, plant: 0, tree: 0 }
+      };
+
+      // --- Streak (incremental, independent of history length) ---
       if (yesterdayCO2 < 300) {
         streak.current++;
         streak.max = Math.max(streak.max, streak.current);
@@ -72,12 +77,7 @@ function updateGamification() {
         streak.current = 0;
       }
 
-      // --- Eco Points ---
-      let ecoData = res.ecoPointsData || {
-        points: 0,
-        counters: { seedling: 0, plant: 0, tree: 0 }
-      };
-
+      // --- Eco Points (cumulative, independent of history length) ---
       const yesterdayPoints = calculatePointsFromCO2(yesterdayCO2);
       ecoData.points += yesterdayPoints;
       ecoData.counters = updateGarden(ecoData.points);
@@ -88,7 +88,8 @@ function updateGamification() {
         ecoPointsData: ecoData,
         lastGamificationProcessedDate: targetDate
       }, () => {
-        console.log("Gamification processed for", targetDate);
+        console.log("Gamification processed for", targetDate, 
+          " | +", yesterdayPoints, "points | streak:", streak.current);
       });
     }
   );
