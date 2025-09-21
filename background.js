@@ -15,7 +15,6 @@ function scheduleMidnightUpdate() {
 
 // === On install / reload ===
 chrome.runtime.onInstalled.addListener(() => {
-  rebuildGamificationData();
   scheduleMidnightUpdate();
 });
 
