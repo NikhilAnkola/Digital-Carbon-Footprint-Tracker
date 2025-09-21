@@ -123,12 +123,13 @@ label[for="stateSelect"] {
 
 /* --- Last 28 Days (Bar + History) --- */
 #historyContainer {
-  max-height: 360px;
+  max-height: 433px;
   overflow-y: auto;
   padding: 8px;
   background: var(--card-bg);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
+  width: 550px;
 }
 
 /* --- Gamification Section --- */
