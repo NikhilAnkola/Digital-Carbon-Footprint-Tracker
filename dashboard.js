@@ -8,43 +8,17 @@ document.addEventListener("DOMContentLoaded", () => {
   chrome.storage.local.get(
     ["lastPopupDate", "streakData", "ecoPointsData"],
     (res) => {
-      if (res.lastPopupDate !== todayStr) {
-        // ---- NEW DAY DETECTED ----
-        let streak = res.streakData || { current: 0, max: 0 };
-        let ecoData =
-          res.ecoPointsData || {
-            points: 0,
-            counters: { seedling: 0, plant: 0, tree: 0 },
-          };
-
-        // Update streak
-        streak.current += 1;
-        if (streak.current > streak.max) streak.max = streak.current;
-
-        // Add eco points
-        ecoData.points += 10;
-
-        // Update garden every 50 points
-        if (ecoData.points % 50 === 0) {
-          if (ecoData.counters.seedling < 5) {
-            ecoData.counters.seedling++;
-          } else if (ecoData.counters.plant < 5) {
-            ecoData.counters.plant++;
-          } else {
-            ecoData.counters.tree++;
-          }
-        }
-
+      if (res.lastPopupDate && res.lastPopupDate !== todayStr) {
+        // ---- NEW DAY DETECTED, ONLY reset daily data ----
         chrome.storage.local.set(
           {
             usage: {},
             co2: {},
-            lastPopupDate: todayStr,
-            streakData: streak,
-            ecoPointsData: ecoData,
+            lastPopupDate: todayStr
           },
           () => {
-            console.log("New day → daily data cleared + gamification updated.");
+            console.log("New day → daily data cleared. Now updating gamification...");
+            chrome.runtime.sendMessage({ type: "updateGamification" }); // Trigger gamification.js
             location.reload();
           }
         );
