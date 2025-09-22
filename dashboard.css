@@ -87,7 +87,6 @@ label[for="stateSelect"] {
   padding: 8px;
   background: var(--card-bg);
   border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
 }
 
 /* --- Prediction Section --- */
@@ -128,7 +127,6 @@ label[for="stateSelect"] {
   padding: 8px;
   background: var(--card-bg);
   border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
   width: 550px;
 }
 
@@ -232,4 +230,33 @@ label[for="stateSelect"] {
 /* small util to hide/show elements reliably */
 .hidden {
   display: none !important;
+}
+
+/* --- Prediction Section Override (compact & centered) --- */
+.card.centered {
+  max-width: 500px;       /* shrink the big empty area */
+  margin: 0 auto;         /* center horizontally */
+  text-align: center;     
+  padding: 1.5rem;        /* reduce large padding */
+  margin-bottom: 23px;
+}
+
+#daysAhead, #predictBtn {
+  font-size: 1rem;
+  padding: 0.5rem 0.8rem;
+  margin: 0.2rem;
+  border-radius: 8px;
+  border: none;
+}
+
+/* Keep button theme consistent */
+#predictBtn {
+  background: var(--accent);
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+#predictBtn:hover {
+  background: var(--accent-dark);
 }
