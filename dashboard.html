@@ -63,12 +63,20 @@
     </div>
 
     <!-- Prediction Section -->
-      <section class="card centered">
-        <label>Days Ahead:</label>
-        <input type="number" id="daysAhead" min="1" max="7" value="1">
-        <button id="predictBtn">Predict</button>
-        <div id="predictionResult">Prediction will appear here.</div>
-      </section>
+    <section class="card centered">
+      <label for="daysAhead">Days Ahead:</label>
+      <select id="daysAhead">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+      </select>
+      <button id="predictBtn">Predict</button>
+      <div id="predictionResult">Prediction will appear here.</div>
+    </section>
 
     <div class="row">
       <!-- === Last 28 Days: CO₂ per Day (Bar, 7 at a time) === -->
