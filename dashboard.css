@@ -237,7 +237,6 @@ label[for="stateSelect"] {
   max-width: 500px;       /* shrink the big empty area */
   margin: 0 auto;         /* center horizontally */
   text-align: center;     
-  padding: 1.5rem;        /* reduce large padding */
   margin-bottom: 23px;
 }
 
