@@ -82,7 +82,7 @@ label[for="stateSelect"] {
 }
 
 #usageContainer {
-  max-height: 360px;        /* Keep height same as chart */
+  max-height: 325px;        /* Keep height same as chart */
   overflow-y: auto;         /* Scrollbar enabled */
   padding: 8px;
   background: var(--card-bg);
