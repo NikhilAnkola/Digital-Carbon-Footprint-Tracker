@@ -112,7 +112,18 @@
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'right',
+          labels: {
+            color: '#e6f6ec',          // matches your theme text
+            boxWidth: 14,
+            padding: 12,
+            font: {
+              size: 12
+            }
+          }
+        },
         tooltip: {
           callbacks: {
             title: () => '',
