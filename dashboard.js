@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Load and render CO2 + usage stats
+  updateTodayDateTitle();
   loadUsageStats();
 
   // Load and render 28-day daily history
@@ -154,6 +155,20 @@ function getEquivalent(co2g) {
 }
 
 // ---------------- LOADERS ----------------
+
+function updateTodayDateTitle() {
+  const title = document.getElementById("todaySummaryTitle");
+  if (!title) return;
+
+  const today = new Date();
+  const formatted = today.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  });
+
+  title.textContent = `Today's Usage Summary (${formatted})`;
+}
 
 function loadUsageStats() {
   const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD format
