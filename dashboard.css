@@ -6,12 +6,12 @@
 
 /* --- Root Theme Variables (easy to change later) --- */
 :root {
-  --bg-color: #0d1117;
-  --card-bg: #161b22;
+  --bg-color: hwb(0 100% 0%);
+  --card-bg: #ffffff;
   --accent: #00ff88;
   --accent-dark: #00cc66;
-  --text-primary: #e6f6ec;
-  --text-secondary: #a3bfae;
+  --text-primary: #000000;
+  --text-secondary: #000000;
   --border-radius: 16px;
   --shadow: 0 4px 12px rgba(0, 255, 136, 0.2);
 }
@@ -33,7 +33,6 @@ body {
 
 /* Headings */
 h2, h3 {
-  color: var(--accent);
   margin-bottom: 10px;
 }
 
@@ -64,6 +63,7 @@ label[for="stateSelect"] {
   box-shadow: var(--shadow);
   padding: 16px;
   margin-bottom: 20px;
+  border: 1px solid var(--accent-dark);
 }
 
 /* --- Flex Layout Helpers --- */
@@ -141,7 +141,6 @@ label[for="stateSelect"] {
 .gamification-cards .card {
   flex: 1 1 200px;
   text-align: center;
-  background: linear-gradient(145deg, #0f2027, #203a43, #2c5364);
   border: 1px solid var(--accent-dark);
 }
 

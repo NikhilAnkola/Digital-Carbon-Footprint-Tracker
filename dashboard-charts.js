@@ -189,8 +189,30 @@
         }
       },
       scales: {
-        x: { ticks: { autoSkip: false } },
-        y: { beginAtZero: true }
+        x: {
+          title: {
+            display: true,
+            text: 'Date',
+            color: '#000000ff',
+            font: { size: 14 }
+          },
+          ticks: {
+            autoSkip: false,
+            color: '#000000ff'
+          }
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'CO₂ (grams)',
+            color: '#000000ff',
+            font: { size: 14 }
+          },
+          ticks: {
+            color: '#000000ff'
+          }
+        }
       }
     };
 
