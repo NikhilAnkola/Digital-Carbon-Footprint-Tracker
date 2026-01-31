@@ -107,18 +107,43 @@
 
       <div class="gamification-cards">
         <div class="card">
-          <h2>🔥 Streak</h2>
+          <h2>🔥 Streak 
+            <span class="info-icon">?</span>
+            <span class="tooltip">
+              Streak increases if your daily CO₂ is below 300g.  
+              If CO₂ ≥ 300g, streak resets to 0.
+            </span>
+          </h2>
           <h3 id="streak-current">Current: 0</h3>
           <h3 id="streak-max">Max: 0</h3>
         </div>
 
         <div class="card">
-          <h2>🏆 Eco Points</h2>
+          <h2>🏆 Eco Points 
+            <span class="info-icon">?</span>
+            <span class="tooltip">
+              Points earned per day based on CO₂ :  
+              &lt;100g → +5  
+              100–200g → +4  
+              200–300g → +3  
+              300–400g → +2  
+              400–500g → +1  
+              &gt;500g → +0
+            </span>
+          </h2>
           <h3 id="eco-points">0</h3>
         </div>
 
         <div class="card">
-          <h2>🌳 Garden</h2>
+          <h2>🌳 Garden 
+            <span class="info-icon">?</span>
+            <span class="tooltip">
+              Garden grows from total Eco Points :  
+              Every 100 points → 1 Tree  
+              If remaining points ≥50 → 1 Plant  
+              If remaining points ≥20 → 1 Seedling
+            </span>
+          </h2>
           <h3 id="garden">Seedlings: 0, Plants: 0, Trees: 0</h3>
         </div>
       </div>
