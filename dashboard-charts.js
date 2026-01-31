@@ -116,7 +116,7 @@
           display: true,
           position: 'right',
           labels: {
-            color: '#e6f6ec',          // matches your theme text
+            color: '#000000',          // matches your theme text
             boxWidth: 14,
             padding: 12,
             font: {
