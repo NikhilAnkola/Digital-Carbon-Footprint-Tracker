@@ -132,6 +132,8 @@ Digital-Carbon-Footprint-Tracker/
 └── README.md
 ```
 
+---
+
 ## ⚙️ Installation Guide
 Step 1: Clone the Repository
 git clone https://github.com/your-username/Digital-Carbon-Footprint-Tracker.git
@@ -163,7 +165,9 @@ AI suggestions
 
 Gamification progress
 
-📊 Research Paper
+---
+
+## 📊 Research Paper
 This project is based on our research paper:
 
 A Hybrid AI Framework for Digital Carbon Footprint Tracking
@@ -177,7 +181,9 @@ Rule-based sustainability recommendations
 
 Gamification-driven behavioral reinforcement
 
-📷 Dashboard Highlights
+---
+
+## 📷 Dashboard Highlights
 Includes:
 Today's CO₂ Summary
 
@@ -191,7 +197,9 @@ Gamification Dashboard
 
 State-wise Carbon Intensity Comparison
 
-🔐 Privacy & Security
+---
+
+## 🔐 Privacy & Security
 The extension prioritizes privacy by:
 
 Tracking only anonymized browsing metadata
@@ -202,7 +210,9 @@ Avoiding sensitive user information collection
 
 This ensures lightweight and privacy-aware sustainability monitoring.
 
-📈 Future Improvements
+---
+
+## 📈 Future Improvements
 Planned future enhancements:
 
 Advanced ML models (Random Forest / XGBoost)
@@ -217,7 +227,9 @@ Multi-browser support
 
 Personalized sustainability scoring
 
-👨‍💻 Authors
+---
+
+## 👨‍💻 Authors
 Shriya Bhambure
 Department of Information Technology
 Shah and Anchor Kutchhi Engineering College
@@ -235,10 +247,14 @@ Dr. Rashmi Malvankar
 
 Ms. Chintal Gala
 
-📜 License
+---
+
+## 📜 License
 This project is developed for academic and research purposes.
 
-⭐ If You Like This Project
+---
+
+## ⭐ If You Like This Project
 Please consider giving it a ⭐ on GitHub!
 
 It helps support sustainable technology research 🌍
