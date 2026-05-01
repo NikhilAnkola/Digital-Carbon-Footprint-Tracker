@@ -136,11 +136,11 @@ Digital-Carbon-Footprint-Tracker/
 
 ## ⚙️ Installation Guide
 ### Step 1: Clone the Repository
-git clone https://github.com/your-username/Digital-Carbon-Footprint-Tracker.git
+git clone https://github.com/NikhilAnkola/Digital-Carbon-Footprint-Tracker.git
 
 ### Step 2: Open Chrome Extensions
-Go to: chrome://extensions/
-Enable: Developer Mode (top-right corner)
+- Go to: chrome://extensions/
+- Enable: Developer Mode (top-right corner)
 
 ### Step 3: Load Unpacked Extension
 Click: Load Unpacked and select the project folder.
@@ -160,42 +160,34 @@ The extension will begin monitoring browser activity and display:
 This project is based on our research paper:
 
 A Hybrid AI Framework for Digital Carbon Footprint Tracking
+
 The paper focuses on:
 
-Browser-level carbon monitoring
-
-ML-based emission forecasting
-
-Rule-based sustainability recommendations
-
-Gamification-driven behavioral reinforcement
+- Browser-level carbon monitoring
+- ML-based emission forecasting
+- Rule-based sustainability recommendations
+- Gamification-driven behavioral reinforcement
 
 ---
 
 ## 📷 Dashboard Highlights
 Includes:
-Today's CO₂ Summary
 
-Previous 7 Days Usage
-
-Previous 28 Days History
-
-CO₂ Prediction Graph
-
-Gamification Dashboard
-
-State-wise Carbon Intensity Comparison
+- Today's CO₂ Summary
+- Previous 7 Days Usage
+- Previous 28 Days History
+- CO₂ Prediction Graph
+- Gamification Dashboard
+- State-wise Carbon Intensity Comparison
 
 ---
 
 ## 🔐 Privacy & Security
 The extension prioritizes privacy by:
 
-Tracking only anonymized browsing metadata
-
-Not storing personal browsing content
-
-Avoiding sensitive user information collection
+- Tracking only anonymized browsing metadata
+- Not storing personal browsing content
+- Avoiding sensitive user information collection
 
 This ensures lightweight and privacy-aware sustainability monitoring.
 
@@ -204,17 +196,12 @@ This ensures lightweight and privacy-aware sustainability monitoring.
 ## 📈 Future Improvements
 Planned future enhancements:
 
-Advanced ML models (Random Forest / XGBoost)
-
-Real-time API-based emission factors
-
-Mobile device integration
-
-Cloud synchronization
-
-Multi-browser support
-
-Personalized sustainability scoring
+- Advanced ML models (Random Forest / XGBoost)
+- Real-time API-based emission factors
+- Mobile device integration
+- Cloud synchronization
+- Multi-browser support
+- Personalized sustainability scoring
 
 ---
 
