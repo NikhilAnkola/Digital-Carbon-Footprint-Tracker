@@ -207,21 +207,18 @@ Planned future enhancements:
 
 ## 👨‍💻 Authors
 Shriya Bhambure
-Department of Information Technology
-Shah and Anchor Kutchhi Engineering College
+- Department of Information Technology
+- Shah and Anchor Kutchhi Engineering College
 
 Nikhil Ankola
-Department of Information Technology
-Shah and Anchor Kutchhi Engineering College
+- Department of Information Technology
+- Shah and Anchor Kutchhi Engineering College
 
 Guided By
-Dr. Vinit Kotak
-
-Dr. Swati Nadkarni
-
-Dr. Rashmi Malvankar
-
-Ms. Chintal Gala
+- Dr. Vinit Kotak
+- Dr. Swati Nadkarni
+- Dr. Rashmi Malvankar
+- Ms. Chintal Gala
 
 ---
 
