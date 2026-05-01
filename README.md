@@ -159,7 +159,7 @@ The extension will begin monitoring browser activity and display:
 ## 📊 Research Paper
 This project is based on our research paper:
 
-A Hybrid AI Framework for Digital Carbon Footprint Tracking
+- A Hybrid AI Framework for Digital Carbon Footprint Tracking
 
 The paper focuses on:
 
