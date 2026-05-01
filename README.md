@@ -74,13 +74,13 @@ These suggestions help users adopt eco-friendly browsing habits.
 
 To improve long-term engagement, the extension includes:
 
-### 🔥 Streaks
+#### 🔥 Streaks
 Maintain low daily emissions to build eco-streaks.
 
-### 🏆 Eco Points
+#### 🏆 Eco Points
 Earn points for sustainable digital behavior.
 
-### 🌳 Virtual Garden
+#### 🌳 Virtual Garden
 Grow trees, plants, and seedlings based on eco-points.
 
 This transforms sustainability into a motivating daily habit.
