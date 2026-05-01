@@ -135,35 +135,24 @@ Digital-Carbon-Footprint-Tracker/
 ---
 
 ## ⚙️ Installation Guide
-Step 1: Clone the Repository
+### Step 1: Clone the Repository
 git clone https://github.com/your-username/Digital-Carbon-Footprint-Tracker.git
-Step 2: Open Chrome Extensions
-Go to:
 
-chrome://extensions/
-Enable:
+### Step 2: Open Chrome Extensions
+Go to: chrome://extensions/
+Enable: Developer Mode (top-right corner)
 
-Developer Mode
-(top-right corner)
+### Step 3: Load Unpacked Extension
+Click: Load Unpacked and select the project folder.
 
-Step 3: Load Unpacked Extension
-Click:
-
-Load Unpacked
-and select the project folder.
-
-Step 4: Start Using
+### Step 4: Start Using
 The extension will begin monitoring browser activity and display:
 
-Carbon footprint dashboard
-
-Emission trends
-
-Predictions
-
-AI suggestions
-
-Gamification progress
+- Carbon footprint dashboard
+- Emission trends
+- Predictions
+- AI suggestions
+- Gamification progress
 
 ---
 
